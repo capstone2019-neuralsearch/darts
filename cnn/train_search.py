@@ -16,7 +16,7 @@ import torch.backends.cudnn as cudnn
 from torch.autograd import Variable
 from model_search import Network
 from architect import Architect
-from datasets import from_file
+from datasets import load_dataset
 
 
 parser = argparse.ArgumentParser("darts")
@@ -70,7 +70,7 @@ def main():
   logging.info('gpu device = %d' % args.gpu)
   logging.info("args = %s", args)
 
-  train_data, OUTPUT_DIM, is_regression = datasets.load_dataset(args, train=True)
+  train_data, OUTPUT_DIM, is_regression = load_dataset(args, train=True)
 
   num_train = len(train_data)
   indices = list(range(num_train))
