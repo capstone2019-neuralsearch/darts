@@ -69,7 +69,7 @@ def main():
   logging.info('gpu device = %d' % args.gpu)
   logging.info("args = %s", args)
 
-  train_data, OUTPUT_DIM, is_regression = load_dataset(args, train=True)
+  train_data, OUTPUT_DIM, IN_CHANNELS, is_regression = load_dataset(args, train=True)
 
   num_train = len(train_data)
   indices = list(range(num_train))
@@ -89,7 +89,7 @@ def main():
   criterion = criterion.cuda()
 
   # TODO: test that passing a regression criterion here properly performs regression
-  model = Network(args.init_channels, OUTPUT_DIM, args.layers, criterion)
+  model = Network(args.init_channels, OUTPUT_DIM, IN_CHANNELS, args.layers, criterion)
   model = model.cuda()
   logging.info("param size = %fMB", utils.count_parameters_in_MB(model))
 

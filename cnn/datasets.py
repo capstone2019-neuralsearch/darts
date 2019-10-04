@@ -29,6 +29,7 @@ def load_dataset(args, train=True):
         tr = train_transform if train else valid_transform
         data = dset.CIFAR10(root=args.data, train=train, download=True, transform=tr)
         output_dim = 10
+        in_channels = 3
         is_regression = False
 
     elif dset_name in VALID_DSET_NAMES['MNIST']:
@@ -36,6 +37,7 @@ def load_dataset(args, train=True):
         tr = train_transform if train else valid_transform
         data = dset.MNIST(root=args.data, train=train, download=True, transform=tr)
         output_dim = 10
+        in_channels = 1
         is_regression = False
 
     elif dset_name in VALID_DSET_NAMES['FashionMNIST']:
@@ -43,6 +45,7 @@ def load_dataset(args, train=True):
         tr = train_transform if train else valid_transform
         data = dset.FashionMNIST(root=args.data, train=train, download=True, transform=tr)
         output_dim = 10
+        in_channels = 1
         is_regression = False
 
     elif dset_name in VALID_DSET_NAMES['GrapheneKirigami']:
@@ -56,4 +59,4 @@ def load_dataset(args, train=True):
         exc_str += '\nValid names are case-insensitive elements of: {}'.format(VALID_DSET_NAMES)
         raise RuntimeError(exc_str)
 
-    return data, output_dim, is_regression
+    return data, output_dim, in_channels, is_regression
