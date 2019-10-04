@@ -89,7 +89,7 @@ def main():
   criterion = criterion.cuda()
 
   # TODO: test that passing a regression criterion here properly performs regression
-  model = Network(args.init_channels, OUTPUT_DIM, IN_CHANNELS, args.layers, criterion)
+  model = Network(args.init_channels, OUTPUT_DIM, args.layers, criterion, num_channels=IN_CHANNELS)
   model = model.cuda()
   logging.info("param size = %fMB", utils.count_parameters_in_MB(model))
 
