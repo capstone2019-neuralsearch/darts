@@ -26,19 +26,22 @@ def load_dataset(args, train=True):
     if dset_name in VALID_DSET_NAMES['CIFAR']:
         # from the original DARTS code
         train_transform, valid_transform = utils._data_transforms_cifar10(args)
-        data = dset.CIFAR10(root=args.data, train=train, download=True, transform=train_transform)
+        tr = train_transform if train else valid_transform
+        data = dset.CIFAR10(root=args.data, train=train, download=True, transform=tr)
         output_dim = 10
         is_regression = False
 
     elif dset_name in VALID_DSET_NAMES['MNIST']:
         train_transform, valid_transform = utils._data_transforms_mnist(args)
-        data = dset.MNIST(root=args.data, train=train, download=True, transform=None)
+        tr = train_transform if train else valid_transform
+        data = dset.MNIST(root=args.data, train=train, download=True, transform=tr)
         output_dim = 10
         is_regression = False
 
     elif dset_name in VALID_DSET_NAMES['FashionMNIST']:
         train_transform, valid_transform = utils._data_transforms_mnist(args)
-        data = dset.FashionMNIST(root=args.data, train=train, download=True, transform=None)
+        tr = train_transform if train else valid_transform
+        data = dset.FashionMNIST(root=args.data, train=train, download=True, transform=tr)
         output_dim = 10
         is_regression = False
 
