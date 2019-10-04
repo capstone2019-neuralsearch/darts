@@ -16,9 +16,12 @@ import torch.backends.cudnn as cudnn
 from torch.autograd import Variable
 from model_search import Network
 from architect import Architect
+from datasets import from_file
 
 
-parser = argparse.ArgumentParser("cifar")
+parser = argparse.ArgumentParser("darts")
+
+parser.add_argument('--dataset', type=str, default='cifar', help='name of the dataset to use (e.g. cifar, mnist, graphene)')
 parser.add_argument('--data', type=str, default='../data', help='location of the data corpus')
 parser.add_argument('--batch_size', type=int, default=64, help='batch size')
 parser.add_argument('--learning_rate', type=float, default=0.025, help='init learning rate')
@@ -38,7 +41,7 @@ parser.add_argument('--save', type=str, default='EXP', help='experiment name')
 parser.add_argument('--seed', type=int, default=2, help='random seed')
 parser.add_argument('--grad_clip', type=float, default=5, help='gradient clipping')
 parser.add_argument('--train_portion', type=float, default=0.5, help='portion of training data')
-parser.add_argument('--unrolled', action='store_true', default=False, help='use one-step unrolled validation loss')
+parser.add_argument('--unrolled', action='store_true', default=True, help='use one-step unrolled validation loss')
 parser.add_argument('--arch_learning_rate', type=float, default=3e-4, help='learning rate for arch encoding')
 parser.add_argument('--arch_weight_decay', type=float, default=1e-3, help='weight decay for arch encoding')
 args = parser.parse_args()
@@ -52,10 +55,6 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO,
 fh = logging.FileHandler(os.path.join(args.save, 'log.txt'))
 fh.setFormatter(logging.Formatter(log_format))
 logging.getLogger().addHandler(fh)
-
-
-CIFAR_CLASSES = 10
-
 
 def main():
   if not torch.cuda.is_available():
@@ -71,20 +70,7 @@ def main():
   logging.info('gpu device = %d' % args.gpu)
   logging.info("args = %s", args)
 
-  criterion = nn.CrossEntropyLoss()
-  criterion = criterion.cuda()
-  model = Network(args.init_channels, CIFAR_CLASSES, args.layers, criterion)
-  model = model.cuda()
-  logging.info("param size = %fMB", utils.count_parameters_in_MB(model))
-
-  optimizer = torch.optim.SGD(
-      model.parameters(),
-      args.learning_rate,
-      momentum=args.momentum,
-      weight_decay=args.weight_decay)
-
-  train_transform, valid_transform = utils._data_transforms_cifar10(args)
-  train_data = dset.CIFAR10(root=args.data, train=True, download=True, transform=train_transform)
+  train_data, OUTPUT_DIM, is_regression = datasets.load_dataset(args, train=True)
 
   num_train = len(train_data)
   indices = list(range(num_train))
@@ -99,6 +85,20 @@ def main():
       train_data, batch_size=args.batch_size,
       sampler=torch.utils.data.sampler.SubsetRandomSampler(indices[split:num_train]),
       pin_memory=True, num_workers=2)
+
+  criterion = nn.CrossEntropyLoss() if not is_regression else nn.MSELoss()
+  criterion = criterion.cuda()
+
+  # TODO: test that passing a regression criterion here properly performs regression
+  model = Network(args.init_channels, OUTPUT_DIM, args.layers, criterion)
+  model = model.cuda()
+  logging.info("param size = %fMB", utils.count_parameters_in_MB(model))
+
+  optimizer = torch.optim.SGD(
+      model.parameters(),
+      args.learning_rate,
+      momentum=args.momentum,
+      weight_decay=args.weight_decay)
 
   scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, float(args.epochs), eta_min=args.learning_rate_min)
@@ -191,5 +191,4 @@ def infer(valid_queue, model, criterion):
 
 
 if __name__ == '__main__':
-  main() 
-
+  main()
