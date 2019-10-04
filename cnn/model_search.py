@@ -72,6 +72,7 @@ class Network(nn.Module):
 
     C_curr = stem_multiplier*C
     self.stem = nn.Sequential(
+      # in_channels, out_channels, kernel_size
       nn.Conv2d(self._num_channels, C_curr, 3, padding=1, bias=False),
       nn.BatchNorm2d(C_curr)
     )
@@ -96,7 +97,7 @@ class Network(nn.Module):
     self._initialize_alphas()
 
   def new(self):
-    model_new = Network(self._C, self._num_classes, self._layers, self._criterion).cuda()
+    model_new = Network(self._C, self._num_classes, self._layers, self._criterion, num_channels=self._num_channels).cuda()
     for x, y in zip(model_new.arch_parameters(), self.arch_parameters()):
         x.data.copy_(y.data)
     return model_new
