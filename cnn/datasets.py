@@ -27,19 +27,19 @@ def load_dataset(args, train=True):
         # from the original DARTS code
         train_transform, valid_transform = utils._data_transforms_cifar10(args)
         data = dset.CIFAR10(root=args.data, train=train, download=True, transform=train_transform)
-        output_dim = len(data.classes)
+        output_dim = 10
         is_regression = False
 
     elif dset_name in VALID_DSET_NAMES['MNIST']:
         # TODO: add transforms?
         data = dset.MNIST(root=args.data, train=train, download=True, transform=None)
-        output_dim = len(data.classes)
+        output_dim = 10
         is_regression = False
 
     elif dset_name in VALID_DSET_NAMES['FashionMNIST']:
         # TODO: add transforms?
         data = dset.FashionMNIST(root=args.data, train=train, download=True, transform=None)
-        output_dim = len(data.classes)
+        output_dim = 10
         is_regression = False
 
     elif dset_name in VALID_DSET_NAMES['GrapheneKirigami']:
