@@ -13,10 +13,13 @@ import torchvision.datasets as dset
 import torch.backends.cudnn as cudnn
 
 from torch.autograd import Variable
+# TODO: possibly use different network
 from model import NetworkCIFAR as Network
+from datasets import load_dataset
 
 
-parser = argparse.ArgumentParser("cifar")
+parser = argparse.ArgumentParser("darts")
+parser.add_argument('--dataset', type=str, default='cifar', help='name of the dataset to use (e.g. cifar, mnist, graphene)')
 parser.add_argument('--data', type=str, default='../data', help='location of the data corpus')
 parser.add_argument('--batch_size', type=int, default=96, help='batch size')
 parser.add_argument('--report_freq', type=float, default=50, help='report frequency')
@@ -54,17 +57,18 @@ def main():
   logging.info("args = %s", args)
 
   genotype = eval("genotypes.%s" % args.arch)
-  model = Network(args.init_channels, CIFAR_CLASSES, args.layers, args.auxiliary, genotype)
+
+  valid_data, OUTPUT_DIM, IN_CHANNELS, is_regression = load_dataset(args, train=False)
+
+  model = Network(args.init_channels, OUTPUT_DIM, args.layers, args.auxiliary, genotype, num_channels=IN_CHANNELS)
   model = model.cuda()
+
   utils.load(model, args.model_path)
 
   logging.info("param size = %fMB", utils.count_parameters_in_MB(model))
 
-  criterion = nn.CrossEntropyLoss()
+  criterion = nn.CrossEntropyLoss() if not is_regression else nn.MSELoss()
   criterion = criterion.cuda()
-
-  _, test_transform = utils._data_transforms_cifar10(args)
-  test_data = dset.CIFAR10(root=args.data, train=False, download=True, transform=test_transform)
 
   test_queue = torch.utils.data.DataLoader(
       test_data, batch_size=args.batch_size, shuffle=False, pin_memory=True, num_workers=2)
@@ -100,5 +104,4 @@ def infer(test_queue, model, criterion):
 
 
 if __name__ == '__main__':
-  main() 
-
+  main()

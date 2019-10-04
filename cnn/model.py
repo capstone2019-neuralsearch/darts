@@ -16,7 +16,7 @@ class Cell(nn.Module):
     else:
       self.preprocess0 = ReLUConvBN(C_prev_prev, C, 1, 1, 0)
     self.preprocess1 = ReLUConvBN(C_prev, C, 1, 1, 0)
-    
+
     if reduction:
       op_names, indices = zip(*genotype.reduce)
       concat = genotype.reduce_concat
@@ -110,18 +110,19 @@ class AuxiliaryHeadImageNet(nn.Module):
 
 class NetworkCIFAR(nn.Module):
 
-  def __init__(self, C, num_classes, layers, auxiliary, genotype):
+  def __init__(self, C, num_classes, layers, auxiliary, genotype, num_channels=3):
     super(NetworkCIFAR, self).__init__()
     self._layers = layers
     self._auxiliary = auxiliary
+    self._num_channels = num_channels
 
     stem_multiplier = 3
     C_curr = stem_multiplier*C
     self.stem = nn.Sequential(
-      nn.Conv2d(3, C_curr, 3, padding=1, bias=False),
+      nn.Conv2d(self._num_channels, C_curr, 3, padding=1, bias=False),
       nn.BatchNorm2d(C_curr)
     )
-    
+
     C_prev_prev, C_prev, C_curr = C_curr, C_curr, C
     self.cells = nn.ModuleList()
     reduction_prev = False
@@ -158,13 +159,14 @@ class NetworkCIFAR(nn.Module):
 
 class NetworkImageNet(nn.Module):
 
-  def __init__(self, C, num_classes, layers, auxiliary, genotype):
+  def __init__(self, C, num_classes, layers, auxiliary, genotype, num_channels=3):
     super(NetworkImageNet, self).__init__()
     self._layers = layers
     self._auxiliary = auxiliary
+    self._num_channels = num_channels
 
     self.stem0 = nn.Sequential(
-      nn.Conv2d(3, C // 2, kernel_size=3, stride=2, padding=1, bias=False),
+      nn.Conv2d(self._num_channels, C // 2, kernel_size=3, stride=2, padding=1, bias=False),
       nn.BatchNorm2d(C // 2),
       nn.ReLU(inplace=True),
       nn.Conv2d(C // 2, C, 3, stride=2, padding=1, bias=False),
@@ -211,4 +213,3 @@ class NetworkImageNet(nn.Module):
     out = self.global_pooling(s1)
     logits = self.classifier(out.view(out.size(0), -1))
     return logits, logits_aux
-
