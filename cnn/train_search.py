@@ -20,7 +20,6 @@ from datasets import load_dataset
 
 
 parser = argparse.ArgumentParser("darts")
-
 parser.add_argument('--dataset', type=str, default='cifar', help='name of the dataset to use (e.g. cifar, mnist, graphene)')
 parser.add_argument('--data', type=str, default='../data', help='location of the data corpus')
 parser.add_argument('--batch_size', type=int, default=64, help='batch size')

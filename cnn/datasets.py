@@ -31,13 +31,13 @@ def load_dataset(args, train=True):
         is_regression = False
 
     elif dset_name in VALID_DSET_NAMES['MNIST']:
-        # TODO: add transforms?
+        train_transform, valid_transform = utils._data_transforms_mnist(args)
         data = dset.MNIST(root=args.data, train=train, download=True, transform=None)
         output_dim = 10
         is_regression = False
 
     elif dset_name in VALID_DSET_NAMES['FashionMNIST']:
-        # TODO: add transforms?
+        train_transform, valid_transform = utils._data_transforms_mnist(args)
         data = dset.FashionMNIST(root=args.data, train=train, download=True, transform=None)
         output_dim = 10
         is_regression = False
