@@ -13,7 +13,9 @@ import torchvision.datasets as dset
 import torch.backends.cudnn as cudnn
 
 from torch.autograd import Variable
+# TODO: possibly use different network
 from model import NetworkCIFAR as Network
+from datasets import load_dataset
 
 
 parser = argparse.ArgumentParser("darts")
