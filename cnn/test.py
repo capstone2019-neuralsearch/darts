@@ -58,7 +58,7 @@ def main():
 
   genotype = eval("genotypes.%s" % args.arch)
 
-  valid_data, OUTPUT_DIM, IN_CHANNELS, is_regression = load_dataset(args, train=False)
+  test_data, OUTPUT_DIM, IN_CHANNELS, is_regression = load_dataset(args, train=False)
 
   model = Network(args.init_channels, OUTPUT_DIM, args.layers, args.auxiliary, genotype, num_channels=IN_CHANNELS)
   model = model.cuda()
