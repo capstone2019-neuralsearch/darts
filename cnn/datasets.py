@@ -1,7 +1,13 @@
 ## Datasets Module
 
+import os
 import utils
 import torchvision.datasets as dset
+import numpy as np
+import xarray as xr
+from sklearn.model_selection import train_test_split
+from torch.utils.data import TensorDataset
+from torch import from_numpy
 
 VALID_DSET_NAMES = {
     'CIFAR': ['cifar', 'cifar10', 'cifar-10'],
@@ -64,9 +70,9 @@ def load_dataset(args, train=True):
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
         if train:
-            data = torch.utils.data.TensorDataset(torch.from_numpy(X_train), torch.from_numpy(y_train))
+            data = TensorDataset(from_numpy(X_train), from_numpy(y_train))
         else:
-            data = torch.utils.data.TensorDataset(torch.from_numpy(X_test), torch.from_numpy(y_test))
+            data = TensorDataset(from_numpy(X_test), from_numpy(y_test))
 
         output_dim = 1
         in_channels = 1
