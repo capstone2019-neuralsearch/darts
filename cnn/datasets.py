@@ -62,7 +62,7 @@ def load_dataset(args, train=True):
         data_path = os.path.join(args.data, 'graphene_processed.nc')
         ds = xr.open_dataset(data_path)
 
-        # X = ds['coarse_image'].values  # the coarse 3x5 image seems enough
+        # X = ds['coarse_image'].values  # coarse 3x5 image (not using it)
         X = ds['fine_image'].values  # the same model works worse on higher resolution image
         y = ds['strain'].values
         X = X[..., np.newaxis]  # add channel dimension
@@ -70,6 +70,10 @@ def load_dataset(args, train=True):
 
         # pytorch conv2d wants channel-first, unlike Keras
         X = X.transpose([0, 3, 1, 2])  # (sample, x, y, channel) -> (sample, channel, x, y)
+
+        # ALTERING DIMENSIONS
+        # subsample from 30x80 to 16x16
+        X = X[:,:,:16,:16]
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
