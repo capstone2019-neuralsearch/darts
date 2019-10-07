@@ -76,6 +76,9 @@ DARTS_V2 = Genotype(normal=[('sep_conv_3x3', 0), ('sep_conv_3x3', 1), ('sep_conv
 
 DARTS = DARTS_V2
 
+# MSE 2019-10-06: Alias CIFAR10 to DARTS; this architecture is really the best discovered for Cifar-10
+CIFAR_10 = DARTS_V2
+
 # MSE 2019-10-05: copy the best discovered architecture from NAS for mnist and fashion-mnist
 # The way to get these is to look at the log.txt in the directory, e.g. search-EXP-20191004-160833
 # train_search.py periodically logs out the best genotype discovered.  copy / paste the last one here.
