@@ -8,6 +8,7 @@ import xarray as xr
 from sklearn.model_selection import train_test_split
 from torch.utils.data import TensorDataset
 from torch import from_numpy
+import boto3
 
 VALID_DSET_NAMES = {
     'CIFAR': ['cifar', 'cifar10', 'cifar-10'],
@@ -15,6 +16,8 @@ VALID_DSET_NAMES = {
     'FashionMNIST': ['fashionmnist', 'fashion-mnist', 'mnistfashion'],
     'GrapheneKirigami': ['graphene', 'graphenekirigami', 'graphene-kirigami', 'kirigami']
 }
+
+BUCKET_NAME = 'capstone2019-google'
 
 def load_dataset(args, train=True):
     """ function to load datasets (e.g. CIFAR10, MNIST, FashionMNIST, Graphene)
@@ -56,7 +59,14 @@ def load_dataset(args, train=True):
 
     elif dset_name in VALID_DSET_NAMES['GrapheneKirigami']:
         # load xarray dataset
-        ds = xr.open_dataset(os.path.join(args.data, 'graphene_processed.nc'))
+        try:
+            # local fs
+            ds = xr.open_dataset(os.path.join(args.data, 'graphene_processed.nc'))
+        except:
+            # S3 fs
+            s3 = boto3.client('s3')
+            s3.download_file(BUCKET_NAME, 'graphene_processed.nc', 'graphene_processed.nc')
+            ds = xr.open_dataset(os.path.join(args.data, 'graphene_processed.nc'))
 
         X = ds['coarse_image'].values  # the coarse 3x5 image seems enough
         # X = ds['fine_image'].values  # the same model works worse on higher resolution image
