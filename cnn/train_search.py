@@ -17,6 +17,7 @@ from torch.autograd import Variable
 from model_search import Network
 from architect import Architect
 from datasets import load_dataset
+from sklearn.metrics import r2_score
 
 
 parser = argparse.ArgumentParser("darts")
@@ -116,7 +117,7 @@ def main():
     print(F.softmax(model.alphas_reduce, dim=-1))
 
     # training
-    train_acc, train_obj = train(train_queue, valid_queue, model, architect, criterion, optimizer, lr)
+    train_acc, train_obj = train(train_queue, valid_queue, model, architect, criterion, optimizer, lr, is_regression=is_regression)
     logging.info('train_acc %f', train_acc)
 
     # validation
@@ -126,7 +127,7 @@ def main():
     utils.save(model, os.path.join(args.save, 'weights.pt'))
 
 
-def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
+def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr, is_regression=False):
   objs = utils.AvgrageMeter()
   top1 = utils.AvgrageMeter()
   top5 = utils.AvgrageMeter()
@@ -153,13 +154,18 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr):
     nn.utils.clip_grad_norm(model.parameters(), args.grad_clip)
     optimizer.step()
 
-    prec1, prec5 = utils.accuracy(logits, target, topk=(1, 5))
-    objs.update(loss.data[0], n)
-    top1.update(prec1.data[0], n)
-    top5.update(prec5.data[0], n)
+    if not is_regression:
+        prec1, prec5 = utils.accuracy(logits, target, topk=(1, 5))
+        objs.update(loss.data[0], n)
+        top1.update(prec1.data[0], n)
+        top5.update(prec5.data[0], n)
 
-    if step % args.report_freq == 0:
-      logging.info('train %03d %e %f %f', step, objs.avg, top1.avg, top5.avg)
+        if step % args.report_freq == 0:
+          logging.info('train %03d %e %f %f', step, objs.avg, top1.avg, top5.avg)
+    else:
+        r2 = r2_score(target.cpu().detach().numpy(), logits.cpu().detach().numpy())
+        objs.update(loss.data[0], n)
+        top1.update(r2, n) # "top1" for regression is the R^2
 
   return top1.avg, objs.avg
 
