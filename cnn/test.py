@@ -16,6 +16,7 @@ from torch.autograd import Variable
 # TODO: possibly use different network
 from model import NetworkCIFAR as Network
 from datasets import load_dataset
+from sklearn.metrics import r2_score
 
 
 parser = argparse.ArgumentParser("darts")
