@@ -58,15 +58,9 @@ def load_dataset(args, train=True):
         is_regression = False
 
     elif dset_name in VALID_DSET_NAMES['GrapheneKirigami']:
-        # load xarray dataset
-        try:
-            # local fs
-            ds = xr.open_dataset(os.path.join(args.data, 'graphene_processed.nc'))
-        except:
-            # S3 fs
-            s3 = boto3.client('s3')
-            s3.download_file(BUCKET_NAME, 'graphene_processed.nc', 'graphene_processed.nc')
-            ds = xr.open_dataset(os.path.join(args.data, 'graphene_processed.nc'))
+        # load xarray dataset from local
+        data_path = os.path.join(args.data, 'graphene_processed.nc')
+        ds = xr.open_dataset(data_path)
 
         X = ds['coarse_image'].values  # the coarse 3x5 image seems enough
         # X = ds['fine_image'].values  # the same model works worse on higher resolution image
