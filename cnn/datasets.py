@@ -1,7 +1,14 @@
 ## Datasets Module
 
+import os
 import utils
 import torchvision.datasets as dset
+import numpy as np
+import xarray as xr
+from sklearn.model_selection import train_test_split
+from torch.utils.data import TensorDataset
+from torch import from_numpy
+import boto3
 
 VALID_DSET_NAMES = {
     'CIFAR': ['cifar', 'cifar10', 'cifar-10'],
@@ -9,6 +16,8 @@ VALID_DSET_NAMES = {
     'FashionMNIST': ['fashionmnist', 'fashion-mnist', 'mnistfashion'],
     'GrapheneKirigami': ['graphene', 'graphenekirigami', 'graphene-kirigami', 'kirigami']
 }
+
+BUCKET_NAME = 'capstone2019-google'
 
 def load_dataset(args, train=True):
     """ function to load datasets (e.g. CIFAR10, MNIST, FashionMNIST, Graphene)
@@ -49,10 +58,33 @@ def load_dataset(args, train=True):
         is_regression = False
 
     elif dset_name in VALID_DSET_NAMES['GrapheneKirigami']:
-        # TODO: implement loading graphene
-        # output_dim =
-        # is_regression = True
-        raise NotImplementedError()
+        # load xarray dataset
+        data_path = os.path.join(args.data, 'graphene_processed.nc')
+        ds = xr.open_dataset(data_path)
+
+        # X = ds['coarse_image'].values  # coarse 3x5 image (not using it)
+        X = ds['fine_image'].values  # the same model works worse on higher resolution image
+        y = ds['strain'].values
+        X = X[..., np.newaxis]  # add channel dimension
+        y = y[:, np.newaxis]  # pytorch wants ending 1 dimension
+
+        # pytorch conv2d wants channel-first, unlike Keras
+        X = X.transpose([0, 3, 1, 2])  # (sample, x, y, channel) -> (sample, channel, x, y)
+
+        # ALTERING DIMENSIONS
+        # subsample from 30x80 to 16x16
+        X = X[:,:,:16,:16]
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+        if train:
+            data = TensorDataset(from_numpy(X_train), from_numpy(y_train))
+        else:
+            data = TensorDataset(from_numpy(X_test), from_numpy(y_test))
+
+        output_dim = 1
+        in_channels = 1
+        is_regression = True
 
     else:
         exc_str = 'Unable to match provided dataset name: {}'.format(dset_name)

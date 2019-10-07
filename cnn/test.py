@@ -16,6 +16,7 @@ from torch.autograd import Variable
 # TODO: possibly use different network
 from model import NetworkCIFAR as Network
 from datasets import load_dataset
+from sklearn.metrics import r2_score
 
 
 parser = argparse.ArgumentParser("darts")
@@ -74,11 +75,11 @@ def main():
       test_data, batch_size=args.batch_size, shuffle=False, pin_memory=True, num_workers=2)
 
   model.drop_path_prob = args.drop_path_prob
-  test_acc, test_obj = infer(test_queue, model, criterion)
-  logging.info('test_acc %f', test_acc)
+  test_acc, test_obj = infer(test_queue, model, criterion, is_regression=is_regression)
+  logging.info('test_acc (R^2 for regression) %f', test_acc)
 
 
-def infer(test_queue, model, criterion):
+def infer(test_queue, model, criterion, is_regression=False):
   objs = utils.AvgrageMeter()
   top1 = utils.AvgrageMeter()
   top5 = utils.AvgrageMeter()
@@ -91,14 +92,23 @@ def infer(test_queue, model, criterion):
     logits, _ = model(input)
     loss = criterion(logits, target)
 
-    prec1, prec5 = utils.accuracy(logits, target, topk=(1, 5))
     n = input.size(0)
-    objs.update(loss.data[0], n)
-    top1.update(prec1.data[0], n)
-    top5.update(prec5.data[0], n)
 
-    if step % args.report_freq == 0:
-      logging.info('test %03d %e %f %f', step, objs.avg, top1.avg, top5.avg)
+    if not is_regression:
+        prec1, prec5 = utils.accuracy(logits, target, topk=(1, 5))
+        objs.update(loss.data[0], n)
+        top1.update(prec1.data[0], n)
+        top5.update(prec5.data[0], n)
+
+        if step % args.report_freq == 0:
+          logging.info('train %03d %e %f %f', step, objs.avg, top1.avg, top5.avg)
+    else:
+        r2 = r2_score(target.data.cpu().numpy(), logits.data.cpu().numpy())
+        objs.update(loss.data[0], n)
+        top1.update(r2, n) # "top1" for regression is the R^2
+
+        if step % args.report_freq == 0:
+          logging.info('train %03d %e %f', step, objs.avg, top1.avg)
 
   return top1.avg, objs.avg
 
