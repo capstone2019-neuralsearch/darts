@@ -49,10 +49,28 @@ def load_dataset(args, train=True):
         is_regression = False
 
     elif dset_name in VALID_DSET_NAMES['GrapheneKirigami']:
-        # TODO: implement loading graphene
-        # output_dim =
-        # is_regression = True
-        raise NotImplementedError()
+        # load xarray dataset
+        ds = xr.open_dataset(os.path.join(args.data, 'graphene_processed.nc'))
+
+        X = ds['coarse_image'].values  # the coarse 3x5 image seems enough
+        # X = ds['fine_image'].values  # the same model works worse on higher resolution image
+        y = ds['strain'].values
+        X = X[..., np.newaxis]  # add channel dimension
+        y = y[:, np.newaxis]  # pytorch wants ending 1 dimension
+
+        # pytorch conv2d wants channel-first, unlike Keras
+        X = X.transpose([0, 3, 1, 2])  # (sample, x, y, channel) -> (sample, channel, x, y)
+
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+        if train:
+            data = torch.utils.data.TensorDataset(torch.from_numpy(X_train), torch.from_numpy(y_train))
+        else:
+            data = torch.utils.data.TensorDataset(torch.from_numpy(X_test), torch.from_numpy(y_test))
+
+        output_dim = 1
+        in_channels = 1
+        is_regression = True
 
     else:
         exc_str = 'Unable to match provided dataset name: {}'.format(dset_name)
