@@ -71,9 +71,10 @@ def load_dataset(args, train=True):
         # pytorch conv2d wants channel-first, unlike Keras
         X = X.transpose([0, 3, 1, 2])  # (sample, x, y, channel) -> (sample, channel, x, y)
 
-        # ALTERING DIMENSIONS
-        # subsample from 30x80 to 16x16
-        X = X[:,:,:16,:16]
+        # it appears we need each dimension to be twice divisible by 2
+        # reshape from 30x80 -> 32x80 by zero-padding
+        # see here for details https://stackoverflow.com/a/46115998
+        X = np.pad(X, [(0, 0), (0, 0), (1, 1), (0, 0)], mode='constant', constant_values=0)
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
