@@ -125,3 +125,6 @@ Session.vim
 *~
 # Auto-generated tag files
 tags
+
+# Mac Crap
+.DS_Store
