@@ -113,8 +113,9 @@ def main():
     genotype = model.genotype()
     logging.info('genotype = %s', genotype)
 
-    print(F.softmax(model.alphas_normal, dim=-1))
-    print(F.softmax(model.alphas_reduce, dim=-1))
+    # change from print statement to logging (saves to file)
+    logging.info('\nalphas_normal = {}'.format(F.softmax(model.alphas_normal, dim=-1)))
+    logging.info('\nalphas_reduce = {}'.format(F.softmax(model.alphas_reduce, dim=-1)))
 
     # training
     train_acc, train_obj = train(train_queue, valid_queue, model, architect, criterion, optimizer, lr, is_regression=is_regression)
