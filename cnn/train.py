@@ -71,7 +71,10 @@ def main():
   train_data, OUTPUT_DIM, IN_CHANNELS, is_regression = load_dataset(args, train=True)
   valid_data, _, _, _ = load_dataset(args, train=False)
 
-  genotype = eval("genotypes.%s" % args.arch)
+  try:
+    genotype = eval("genotypes.%s" % args.arch)
+  except (AttributeError, SyntaxError):
+    genotype = genotypes.load_genotype_from_file(args.arch)
 
   model = Network(args.init_channels, OUTPUT_DIM, args.layers, args.auxiliary, genotype, num_channels=IN_CHANNELS)
   model = model.cuda()

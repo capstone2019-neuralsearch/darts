@@ -113,8 +113,13 @@ def main():
     genotype = model.genotype()
     logging.info('genotype = %s', genotype)
 
-    print(F.softmax(model.alphas_normal, dim=-1))
-    print(F.softmax(model.alphas_reduce, dim=-1))
+    # saving & logging weights for architecture
+    normal_weights = F.softmax(model.alphas_normal, dim=-1)
+    reduce_weights = F.softmax(model.alphas_reduce, dim=-1)
+    logging.info('\nalphas_normal = {}'.format(normal_weights))
+    logging.info('\nalphas_reduce = {}'.format(reduce_weights))
+    np.save(os.path.join(args.save, 'normal_%03d' % epoch), normal_weights.data.cpu().numpy())
+    np.save(os.path.join(args.save, 'reduce_%03d' % epoch), reduce_weights.data.cpu().numpy())
 
     # training
     train_acc, train_obj = train(train_queue, valid_queue, model, architect, criterion, optimizer, lr, is_regression=is_regression)
