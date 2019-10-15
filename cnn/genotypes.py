@@ -1,6 +1,19 @@
+import os
 from collections import namedtuple
 
 Genotype = namedtuple('Genotype', 'normal normal_concat reduce reduce_concat')
+
+def save_genotype_to_file(genotype, filename):
+  dirname = os.path.dirname(filename)
+  if not os.path.exists(dirname):
+    os.makedirs(dirname)
+  with open(filename, "w") as f:
+    f.write(str(genotype))
+
+def load_genotype_from_file(filename):
+  with open(filename, "r") as f:
+    return eval(f.readline().strip())
+
 
 PRIMITIVES = [
     'none',
