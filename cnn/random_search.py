@@ -1,3 +1,4 @@
+import sys
 from genotypes import Genotype, PRIMITIVES
 from random import choice
 from visualize import plot
@@ -31,7 +32,7 @@ def generate_random_genotype(n_units=4, operations=None):
     def random_op(i):
         # An operation that goes to i can't start from i itself
         op = choice(operations)
-        starting_point = choice([j for j in range(n_units) if j != i + 2])
+        starting_point = choice(range(i + 2))
         return op, starting_point
 
     for i in range(n_units):
