@@ -15,7 +15,8 @@ import torch.backends.cudnn as cudnn
 
 from torch.autograd import Variable
 # TODO: possibly use different network
-from model import NetworkCIFAR as Network
+from model import NetworkCIFAR
+from model_search import Network
 from datasets import load_dataset
 from sklearn.metrics import r2_score
 
@@ -42,9 +43,12 @@ parser.add_argument('--save', type=str, default='EXP', help='experiment name')
 parser.add_argument('--seed', type=int, default=0, help='random seed')
 parser.add_argument('--arch', type=str, default='DARTS', help='which architecture to use')
 parser.add_argument('--grad_clip', type=float, default=5, help='gradient clipping')
+parser.add_argument('--random', action="store_true", default=False, help='train a random cell')
 args = parser.parse_args()
 
 args.save = 'eval-{}-{}'.format(args.save, time.strftime("%Y%m%d-%H%M%S"))
+if args.random:
+  args.save = 'random' + args.save
 utils.create_exp_dir(args.save, scripts_to_save=glob.glob('*.py'))
 
 log_format = '%(asctime)s %(message)s'
@@ -71,12 +75,16 @@ def main():
   train_data, OUTPUT_DIM, IN_CHANNELS, is_regression = load_dataset(args, train=True)
   valid_data, _, _, _ = load_dataset(args, train=False)
 
-  try:
-    genotype = eval("genotypes.%s" % args.arch)
-  except (AttributeError, SyntaxError):
-    genotype = genotypes.load_genotype_from_file(args.arch)
+  if args.random:
+    model_tmp = Network(args.init_channels, OUTPUT_DIM, args.layers, criterion, num_channels=IN_CHANNELS)
+    genotype = model_tmp.genotype()  # Random
+  else:
+    try:  
+      genotype = eval("genotypes.%s" % args.arch)
+    except (AttributeError, SyntaxError):
+      genotype = genotypes.load_genotype_from_file(args.arch)
 
-  model = Network(args.init_channels, OUTPUT_DIM, args.layers, args.auxiliary, genotype, num_channels=IN_CHANNELS)
+  model = NetworkCIFAR(args.init_channels, OUTPUT_DIM, args.layers, args.auxiliary, genotype, num_channels=IN_CHANNELS)
   model = model.cuda()
 
   logging.info("param size = %fMB", utils.count_parameters_in_MB(model))
