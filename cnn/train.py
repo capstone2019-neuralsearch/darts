@@ -48,7 +48,7 @@ args = parser.parse_args()
 
 args.save = 'eval-{}-{}'.format(args.save, time.strftime("%Y%m%d-%H%M%S"))
 if args.random:
-  args.save = 'random' + args.save
+  args.save = 'random_' + args.save
 utils.create_exp_dir(args.save, scripts_to_save=glob.glob('*.py'))
 
 log_format = '%(asctime)s %(message)s'
@@ -66,7 +66,12 @@ def main():
   np.random.seed(args.seed)
   torch.cuda.set_device(args.gpu)
   cudnn.benchmark = True
-  torch.manual_seed(args.seed)
+
+  if not args.random:
+    # We would always get the same random architecture if we set the random
+    # seed here. We'll set it after finding a random genotype.
+    torch.manual_seed(args.seed) 
+
   cudnn.enabled=True
   torch.cuda.manual_seed(args.seed)
   logging.info('gpu device = %d' % args.gpu)
@@ -75,21 +80,26 @@ def main():
   train_data, OUTPUT_DIM, IN_CHANNELS, is_regression = load_dataset(args, train=True)
   valid_data, _, _, _ = load_dataset(args, train=False)
 
+  criterion = nn.CrossEntropyLoss() if not is_regression else nn.MSELoss()
+
   if args.random:
     model_tmp = Network(args.init_channels, OUTPUT_DIM, args.layers, criterion, num_channels=IN_CHANNELS)
-    genotype = model_tmp.genotype()  # Random
+    genotype = model_tmp.genotype()  # Random  
+
+    # We can now set the random seed.
+    torch.manual_seed(args.seed)
   else:
     try:  
       genotype = eval("genotypes.%s" % args.arch)
     except (AttributeError, SyntaxError):
       genotype = genotypes.load_genotype_from_file(args.arch)
 
+  genotypes.save_genotype_to_file(genotype, os.path.join(args.save, "genotype.arch"))
   model = NetworkCIFAR(args.init_channels, OUTPUT_DIM, args.layers, args.auxiliary, genotype, num_channels=IN_CHANNELS)
   model = model.cuda()
 
   logging.info("param size = %fMB", utils.count_parameters_in_MB(model))
 
-  criterion = nn.CrossEntropyLoss() if not is_regression else nn.MSELoss()
   criterion = criterion.cuda()
 
   optimizer = torch.optim.SGD(
