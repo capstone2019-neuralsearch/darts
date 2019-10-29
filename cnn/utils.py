@@ -97,6 +97,32 @@ def _data_transforms_mnist(args):
     ])
   return train_transform, valid_transform
 
+def _data_transforms_galaxy_zoo(args):
+    """Data transformations for the Galaxy Zoo data set"""
+    # Parameters for this data set; mean, std dev, original image size, and new image size
+    GZ_MEAN = [0.485, 0.456, 0.406]
+    GZ_STD = [0.229, 0.224, 0.225]
+    CENTER_SIZE = 224
+    SHRUNKEN_SIZE = 56
+    # training transform includes resize; random flips and rotations; and normalization
+    train_transform = transforms.Compose([
+        transforms.CenterCrop((CENTER_SIZE, CENTER_SIZE)),
+        transforms.Resize((SHRUNKEN_SIZE, SHRUNKEN_SIZE)),
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomRotation(degrees=(0,360)),
+        transforms.RandomVerticalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=GZ_MEAN, std=GZ_STD)  
+    ])
+    # validation transform includes only resize and normalization
+    valid_transform = transforms.Compose([
+        transforms.CenterCrop((CENTER_SIZE, CENTER_SIZE)),
+        transforms.Resize((SHRUNKEN_SIZE, SHRUNKEN_SIZE)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=GZ_MEAN, std=GZ_STD)  
+    ])
+    return train_transform, valid_transform
+
 def count_parameters_in_MB(model):
   return np.sum(np.prod(v.size()) for name, v in model.named_parameters() if "auxiliary" not in name)/1e6
 

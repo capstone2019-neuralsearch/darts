@@ -2,23 +2,27 @@
 
 import os
 import utils
+import torch
 import torchvision.datasets as dset
 import numpy as np
 import xarray as xr
 from sklearn.model_selection import train_test_split
-from torch.utils.data import TensorDataset
-from torch import from_numpy
+from torch.utils.data import TensorDataset, Dataset
 import boto3
+
+from galaxy_zoo import DatasetGalaxyZoo_v1 as DatasetsetGalaxyZoo
 
 VALID_DSET_NAMES = {
     'CIFAR': ['cifar', 'cifar10', 'cifar-10'],
     'MNIST': ['mnist'],
     'FashionMNIST': ['fashionmnist', 'fashion-mnist', 'mnistfashion'],
-    'GrapheneKirigami': ['graphene', 'graphenekirigami', 'graphene-kirigami', 'kirigami']
+    'GrapheneKirigami': ['graphene', 'graphenekirigami', 'graphene-kirigami', 'kirigami'],
+    'GalaxyZoo': ['galaxy-zoo', 'galaxyzoo']
 }
 
 BUCKET_NAME = 'capstone2019-google'
 
+# *****************************************************************************
 def load_dataset(args, train=True):
     """ function to load datasets (e.g. CIFAR10, MNIST, FashionMNIST, Graphene)
 
@@ -86,6 +90,27 @@ def load_dataset(args, train=True):
         output_dim = 1
         in_channels = 1
         is_regression = True
+
+    elif dset_name in VALID_DSET_NAMES['GalaxyZoo']:
+        # parent path for the galaxy zoo dataset
+        data_path = os.path.join(args.data, 'galaxy_zoo')
+        # train and test transforms for this data set; choose applicable transform
+        train_transform, valid_transform = utils._data_transforms_galaxy_zoo(args)
+        transform = train_transform if train else valid_transform
+        # the locations of the images and CSV label files for train and test
+        train_img_dir = os.path.join(data_path, 'images_train')
+        train_csv_file = os.path.join(data_path, 'labels_train/labels_train.csv')
+        test_img_dir = os.path.join(data_path, 'images_test')
+        test_csv_file = os.path.join(data_path, 'benchmark_solutions/central_pirxel_benchmark.csv')
+        # choose appropriate image directory and CSV file
+        img_dir = train_img_dir if train else test_img_dir
+        csv_file = train_csv_file if train else test_csv_file
+        # instantiate the Dataset
+        data = DatasetsetGalaxyZoo(train_img_dir, train_csv_file, transform=transform)
+        # TODO change to output_dim=11; add logic to fill in 37 classifiers from 11 decision tree outputs
+        output_dim = 37
+        in_channels = 3
+        is_regression = False
 
     else:
         exc_str = 'Unable to match provided dataset name: {}'.format(dset_name)
