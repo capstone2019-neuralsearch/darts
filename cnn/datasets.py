@@ -4,13 +4,13 @@ import os
 import utils
 import torch
 import torchvision.datasets as dset
+from torch.utils.data import TensorDataset, Dataset
 import numpy as np
 import xarray as xr
 from sklearn.model_selection import train_test_split
-from torch.utils.data import TensorDataset, Dataset
 import boto3
 
-from galaxy_zoo import DatasetGalaxyZoo_v1 as DatasetsetGalaxyZoo
+from galaxy_zoo import DatasetGalaxyZoo
 
 VALID_DSET_NAMES = {
     'CIFAR': ['cifar', 'cifar10', 'cifar-10'],
@@ -106,11 +106,11 @@ def load_dataset(args, train=True):
         img_dir = train_img_dir if train else test_img_dir
         csv_file = train_csv_file if train else test_csv_file
         # instantiate the Dataset
-        data = DatasetsetGalaxyZoo(train_img_dir, train_csv_file, transform=transform)
-        # TODO change to output_dim=11; add logic to fill in 37 classifiers from 11 decision tree outputs
+        data = DatasetGalaxyZoo(train_img_dir, train_csv_file, transform=transform)
+        # TODO add logic to fill in 37 classifiers from 11 decision tree outputs
         output_dim = 37
         in_channels = 3
-        is_regression = False
+        is_regression = True
 
     else:
         exc_str = 'Unable to match provided dataset name: {}'.format(dset_name)
