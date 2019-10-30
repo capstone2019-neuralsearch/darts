@@ -200,14 +200,14 @@ def infer(valid_queue, model, criterion, is_regression=False):
         top5.update(prec5.data[0], n)
 
         if step % args.report_freq == 0:
-          logging.info('train %03d %e %f %f', step, objs.avg, top1.avg, top5.avg)
+          logging.info('valid %03d %e %f %f', step, objs.avg, top1.avg, top5.avg)
     else:
         r2 = r2_score(target.data.cpu().numpy(), logits.data.cpu().numpy())
         objs.update(loss.data[0], n)
         top1.update(r2, n) # "top1" for regression is the R^2
 
         if step % args.report_freq == 0:
-          logging.info('train %03d %e %f', step, objs.avg, top1.avg)
+          logging.info('valid %03d %e %f', step, objs.avg, top1.avg)
 
   return top1.avg, objs.avg
 
