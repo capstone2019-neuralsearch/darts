@@ -46,7 +46,7 @@ parser.add_argument('--grad_clip', type=float, default=5, help='gradient clippin
 parser.add_argument('--random', action="store_true", default=False, help='train a random cell')
 args = parser.parse_args()
 
-args.save = 'eval-{}-{}'.format(args.save, time.strftime("%Y%m%d-%H%M%S"))
+args.save = 'eval-{}-{}-{}'.format(args.dataset, args.save, time.strftime("%Y%m%d-%H%M%S"))
 if args.random:
   args.save = 'random_' + args.save
 utils.create_exp_dir(args.save, scripts_to_save=glob.glob('*.py'))
