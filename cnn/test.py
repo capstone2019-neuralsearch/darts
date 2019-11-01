@@ -81,6 +81,10 @@ def main():
   test_acc, test_obj = infer(test_queue, model, criterion, is_regression=is_regression)
   logging.info('test_acc (R^2 for regression) %f', test_acc)
 
+  weights_foldername = os.path.dirname(args.model_path)
+  with open(os.path.join(weights_foldername, "test.txt"), "w") as f:
+    f.write(str(test_acc))
+
 
 def infer(test_queue, model, criterion, is_regression=False):
   objs = utils.AvgrageMeter()
