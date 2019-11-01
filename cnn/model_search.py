@@ -199,11 +199,40 @@ class NetworkGalaxyZoo(Network):
       C_prev_prev, C_prev = C_prev, multiplier*C_curr
 
     self.global_pooling = nn.AdaptiveAvgPool2d(1)
+
     # Galaxy Zoo question 1: smooth galaxy; galaxy with features or disk; elliptic
     self.classifier_q1 = nn.Linear(C_prev, 3)
-    # placeholder
-    self.classifier_q2 = nn.Linear(C_prev, 34)
-    
+
+    # Galaxy Zoo question 2: Is it edge on?
+    self.classifier_q2 = nn.Linear(C_prev, 2)
+
+    # Galaxy Zoo question 3: Is there a bar?
+    self.classifier_q3 = nn.Linear(C_prev, 2)
+
+    # Galaxy Zoo question 4: Is there a spiral pattern?
+    self.classifier_q4 = nn.Linear(C_prev, 2)
+
+    # Galaxy Zoo question 5: How prominent is the central bulge?
+    self.classifier_q5 = nn.Linear(C_prev, 4)
+
+    # Galaxy Zoo question 6: Is there anything odd?
+    self.classifier_q6 = nn.Linear(C_prev, 2)
+
+    # Galaxy Zoo question 7: How rounded is it?
+    self.classifier_q7 = nn.Linear(C_prev, 3)
+
+    # Galaxy Zoo question 8: What is the odd feature?
+    self.classifier_q8 = nn.Linear(C_prev, 7)
+
+    # Galaxy Zoo question 9: Is Does the galaxy have a bulge?
+    self.classifier_q9 = nn.Linear(C_prev, 3)
+
+    # Galaxy Zoo question 10: How tightly wound is it?
+    self.classifier_q10 = nn.Linear(C_prev, 3)
+
+    # Galaxy Zoo question 11: How many spiral arms?
+    self.classifier_q11 = nn.Linear(C_prev, 6)
+
     # initialize edge weights
     self._initialize_alphas()
 
@@ -226,6 +255,62 @@ class NetworkGalaxyZoo(Network):
         weights = F.softmax(self.alphas_normal, dim=-1)
       s0, s1 = s1, cell(s0, s1, weights)
     out = self.global_pooling(s1)
+
+    # Logits for classifiers on GalaxyZoo questions
     logits_q1 = self.classifier_q1(out.view(out.size(0),-1))
     logits_q2 = self.classifier_q2(out.view(out.size(0),-1))
-    return logits_q1
+    logits_q3 = self.classifier_q3(out.view(out.size(0),-1))
+    logits_q4 = self.classifier_q4(out.view(out.size(0),-1))
+    logits_q5 = self.classifier_q5(out.view(out.size(0),-1))
+    logits_q6 = self.classifier_q6(out.view(out.size(0),-1))
+    logits_q7 = self.classifier_q7(out.view(out.size(0),-1))
+    logits_q8 = self.classifier_q8(out.view(out.size(0),-1))
+    logits_q9 = self.classifier_q9(out.view(out.size(0),-1))
+    logits_q10 = self.classifier_q10(out.view(out.size(0),-1))
+    logits_q11 = self.classifier_q11(out.view(out.size(0),-1))
+
+    # Classification probabilities for GalaxyZoo questions
+    # Each output is a product of (probability classification is relevant) x (conditional probabilities)
+    # A1 = C1
+    probs_q1 = F.softmax(logits_q1, dim=-1)
+    C1_1 = probs_q1[:,0:1]
+    C1_2 = probs_q1[:,1:2]
+
+    # A2 = C1.2 * C2
+    probs_q2 = C1_2 * F.softmax(logits_q2, dim=-1)
+    C2_1 = probs_q2[:,0:1]
+    C2_2 = probs_q2[:,1:2]
+
+    # A3 = C2.2 * C3
+    probs_q3 = C2_2 * F.softmax(logits_q3, dim=-1)
+
+    # A4 = C2.2 * C4
+    probs_q4 = C2_2 * F.softmax(logits_q4, dim=-1)
+    C4_1 = probs_q4[:,0:1]
+
+    # A5 = C2.2 * C5
+    probs_q5 = C2_2 * F.softmax(logits_q5, dim=-1)
+
+    # A6 = C6
+    probs_q6 = F.softmax(logits_q6, dim=-1)
+    C6_1 = probs_q1[:,0:1]
+
+    # A7 = C1.1 * C7
+    probs_q7 = C1_1 * F.softmax(logits_q7, dim=-1)
+
+    # A8 = C6.1 * C8
+    probs_q8 = C6_1 * F.softmax(logits_q8, dim=-1)
+
+    # A9 = C2.1 * C9
+    probs_q9 = C2_1 * F.softmax(logits_q9, dim=-1)
+
+    # A10 = C4.1 * C10
+    probs_q10 = C4_1 * F.softmax(logits_q10, dim=-1)
+
+    # A11 = C4.1 * C10
+    probs_q11 = C4_1 * F.softmax(logits_q11, dim=-1)
+
+    # Concatenate probabilities into vector of length 37
+    probs = torch.cat([probs_q1, probs_q2, probs_q3, probs_q4, probs_q5, probs_q6, 
+                       probs_q7, probs_q8, probs_q9, probs_q10, probs_q11], dim=-1)
+    return probs

@@ -44,6 +44,8 @@ parser.add_argument('--train_portion', type=float, default=0.5, help='portion of
 parser.add_argument('--unrolled', action='store_true', default=True, help='use one-step unrolled validation loss')
 parser.add_argument('--arch_learning_rate', type=float, default=3e-4, help='learning rate for arch encoding')
 parser.add_argument('--arch_weight_decay', type=float, default=1e-3, help='weight decay for arch encoding')
+parser.add_argument('--gz_regression', action='store_true', default=False, 
+                    help='run GalaxyZoo as a standard regression (default True follows custom GZ decision tree)')
 args = parser.parse_args()
 
 args.save = 'search-{}-{}'.format(args.save, time.strftime("%Y%m%d-%H%M%S"))
@@ -57,8 +59,9 @@ fh.setFormatter(logging.Formatter(log_format))
 logging.getLogger().addHandler(fh)
 
 # In the special case that the dataset is GalaxyZoo, overwrite Network with GalaxyZooNetwork
-# if args.dataset in VALID_DSET_NAMES['GalaxyZoo']:
-#    Network = NetworkGalaxyZoo
+# unless the user specified gz_regression
+if (args.dataset in VALID_DSET_NAMES['GalaxyZoo']) and not args.gz_regression:
+   Network = NetworkGalaxyZoo
 
 def main():
   if not torch.cuda.is_available():
