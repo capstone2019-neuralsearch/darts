@@ -25,12 +25,12 @@ parser = argparse.ArgumentParser("darts")
 parser.add_argument('--dataset', type=str, default='cifar', help='name of the dataset to use (e.g. cifar, mnist, graphene)')
 parser.add_argument('--data', type=str, default='../data', help='location of the data corpus')
 parser.add_argument('--batch_size', type=int, default=96, help='batch size')
-parser.add_argument('--learning_rate', type=float, default=0.025, help='init learning rate')
+parser.add_argument('--learning_rate', type=float, default=0.001, help='init learning rate')
 parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
 parser.add_argument('--weight_decay', type=float, default=3e-4, help='weight decay')
 parser.add_argument('--report_freq', type=float, default=50, help='report frequency')
 parser.add_argument('--gpu', type=int, default=0, help='gpu device id')
-parser.add_argument('--epochs', type=int, default=600, help='num of training epochs')
+parser.add_argument('--epochs', type=int, default=100, help='num of training epochs')
 parser.add_argument('--init_channels', type=int, default=36, help='num of init channels')
 parser.add_argument('--layers', type=int, default=20, help='total number of layers')
 parser.add_argument('--model_path', type=str, default='saved_models', help='path to save the model')
@@ -194,14 +194,14 @@ def infer(valid_queue, model, criterion, is_regression=False):
         top5.update(prec5.data[0], n)
 
         if step % args.report_freq == 0:
-          logging.info('train %03d %e %f %f', step, objs.avg, top1.avg, top5.avg)
+          logging.info('valid %03d %e %f %f', step, objs.avg, top1.avg, top5.avg)
     else:
         r2 = r2_score(target.data.cpu().numpy(), logits.data.cpu().numpy())
         objs.update(loss.data[0], n)
         top1.update(r2, n) # "top1" for regression is the R^2
 
         if step % args.report_freq == 0:
-          logging.info('train %03d %e %f', step, objs.avg, top1.avg)
+          logging.info('valid %03d %e %f', step, objs.avg, top1.avg)
 
   return top1.avg, objs.avg
 
