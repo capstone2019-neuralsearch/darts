@@ -14,9 +14,9 @@ import torchvision.datasets as dset
 import torch.backends.cudnn as cudnn
 
 from torch.autograd import Variable
-from model_search import Network
+from model_search import Network, NetworkGalaxyZoo
 from architect import Architect
-from datasets import load_dataset
+from datasets import load_dataset, VALID_DSET_NAMES
 from sklearn.metrics import r2_score
 
 
@@ -56,6 +56,10 @@ fh = logging.FileHandler(os.path.join(args.save, 'log.txt'))
 fh.setFormatter(logging.Formatter(log_format))
 logging.getLogger().addHandler(fh)
 
+# In the special case that the dataset is GalaxyZoo, overwrite Network with GalaxyZooNetwork
+# if args.dataset in VALID_DSET_NAMES['GalaxyZoo']:
+#    Network = NetworkGalaxyZoo
+
 def main():
   if not torch.cuda.is_available():
     logging.info('no gpu device available')
@@ -89,7 +93,6 @@ def main():
   criterion = nn.CrossEntropyLoss() if not is_regression else nn.MSELoss()
   criterion = criterion.cuda()
 
-  # TODO: test that passing a regression criterion here properly performs regression
   model = Network(args.init_channels, OUTPUT_DIM, args.layers, criterion, num_channels=IN_CHANNELS)
   model = model.cuda()
   logging.info("param size = %fMB", utils.count_parameters_in_MB(model))

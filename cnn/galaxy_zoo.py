@@ -15,11 +15,7 @@ class DatasetGalaxyZoo(Dataset):
         self.transform = transform
 
     def __len__(self):
-        # TODO - replace this with full data length
-        # return len(self.classes_frame)
-        max_len = 16
-        print(f'DatasetGalaxyZoo capping dataset length at {max_len}')
-        return min(len(self.classes_frame), max_len)
+        return len(self.classes_frame)
 
     def __getitem__(self, idx):
         img_id = self.classes_frame.iloc[idx, 0]
@@ -35,9 +31,6 @@ class DatasetGalaxyZoo(Dataset):
         labels = sample['labels']
         # convert labels to a PyTorch tensor
         labels = torch.FloatTensor(labels)
-        if (idx==0):
-            print(f'image.shape={image.shape}')
-            print(f'labels.shape={labels.shape}')
         return image, labels
 
 
