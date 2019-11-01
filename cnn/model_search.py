@@ -162,3 +162,70 @@ class Network(nn.Module):
       reduce=gene_reduce, reduce_concat=concat
     )
     return genotype
+
+
+class NetworkGalaxyZoo(Network):
+  """Subclass of Network specialized for the GalaxyZoo problem"""
+
+  def __init__(self, C, num_classes, layers, criterion, num_channels=3, steps=4, multiplier=4, stem_multiplier=3):
+    super(Network, self).__init__()
+    self._C = C
+    self._num_classes = num_classes
+    self._layers = layers
+    self._criterion = criterion
+    self._steps = steps
+    self._multiplier = multiplier
+    self._num_channels = num_channels
+
+    C_curr = stem_multiplier*C
+    self.stem = nn.Sequential(
+      # in_channels, out_channels, kernel_size
+      nn.Conv2d(self._num_channels, C_curr, 3, padding=1, bias=False),
+      nn.BatchNorm2d(C_curr)
+    )
+
+    C_prev_prev, C_prev, C_curr = C_curr, C_curr, C
+    self.cells = nn.ModuleList()
+    reduction_prev = False
+    for i in range(layers):
+      if i in [layers//3, 2*layers//3]:
+        C_curr *= 2
+        reduction = True
+      else:
+        reduction = False
+      cell = Cell(steps, multiplier, C_prev_prev, C_prev, C_curr, reduction, reduction_prev)
+      reduction_prev = reduction
+      self.cells += [cell]
+      C_prev_prev, C_prev = C_prev, multiplier*C_curr
+
+    self.global_pooling = nn.AdaptiveAvgPool2d(1)
+    # Galaxy Zoo question 1: smooth galaxy; galaxy with features or disk; elliptic
+    self.classifier_q1 = nn.Linear(C_prev, 3)
+    # placeholder
+    self.classifier_q2 = nn.Linear(C_prev, 34)
+    
+    # initialize edge weights
+    self._initialize_alphas()
+
+  def new(self):
+    model_new = NetworkGalaxyZoo(self._C, self._num_classes, self._layers, self._criterion, num_channels=self._num_channels).cuda()
+    for x, y in zip(model_new.arch_parameters(), self.arch_parameters()):
+        x.data.copy_(y.data)
+    return model_new
+
+  def forward(self, input):
+    """
+    Specialized forward pass for GalaxyZoo; hybrid of classification and regression.
+    The first part of the forward pass is the same as 
+    """
+    s0 = s1 = self.stem(input)
+    for i, cell in enumerate(self.cells):
+      if cell.reduction:
+        weights = F.softmax(self.alphas_reduce, dim=-1)
+      else:
+        weights = F.softmax(self.alphas_normal, dim=-1)
+      s0, s1 = s1, cell(s0, s1, weights)
+    out = self.global_pooling(s1)
+    logits_q1 = self.classifier_q1(out.view(out.size(0),-1))
+    logits_q2 = self.classifier_q2(out.view(out.size(0),-1))
+    return logits_q1
