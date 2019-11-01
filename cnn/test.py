@@ -57,7 +57,10 @@ def main():
   logging.info('gpu device = %d' % args.gpu)
   logging.info("args = %s", args)
 
-  genotype = eval("genotypes.%s" % args.arch)
+  try:  
+    genotype = eval("genotypes.%s" % args.arch)
+  except (AttributeError, SyntaxError):
+    genotype = genotypes.load_genotype_from_file(args.arch)
 
   test_data, OUTPUT_DIM, IN_CHANNELS, is_regression = load_dataset(args, train=False)
 
