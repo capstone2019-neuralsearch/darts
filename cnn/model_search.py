@@ -199,39 +199,47 @@ class NetworkGalaxyZoo(Network):
       C_prev_prev, C_prev = C_prev, multiplier*C_curr
 
     self.global_pooling = nn.AdaptiveAvgPool2d(1)
+    
+    # Fully connected layers
+    fc1_size = 1024
+    # print(f'type(C_prev) = {type(C_prev)}')
+    self.fc1 = nn.Linear(C_prev, fc1_size)
+    # print(f'type(fc1) = {type(self.fc1)}')
+    # fc2_size = 256
+    # self.fc2 = nn.Linear(fc1_size, fc2_size)
 
     # Galaxy Zoo question 1: smooth galaxy; galaxy with features or disk; elliptic
-    self.classifier_q1 = nn.Linear(C_prev, 3)
+    self.classifier_q1 = nn.Linear(fc1_size, 3)
 
     # Galaxy Zoo question 2: Is it edge on?
-    self.classifier_q2 = nn.Linear(C_prev, 2)
+    self.classifier_q2 = nn.Linear(fc1_size, 2)
 
     # Galaxy Zoo question 3: Is there a bar?
-    self.classifier_q3 = nn.Linear(C_prev, 2)
+    self.classifier_q3 = nn.Linear(fc1_size, 2)
 
     # Galaxy Zoo question 4: Is there a spiral pattern?
-    self.classifier_q4 = nn.Linear(C_prev, 2)
+    self.classifier_q4 = nn.Linear(fc1_size, 2)
 
     # Galaxy Zoo question 5: How prominent is the central bulge?
-    self.classifier_q5 = nn.Linear(C_prev, 4)
+    self.classifier_q5 = nn.Linear(fc1_size, 4)
 
     # Galaxy Zoo question 6: Is there anything odd?
-    self.classifier_q6 = nn.Linear(C_prev, 2)
+    self.classifier_q6 = nn.Linear(fc1_size, 2)
 
     # Galaxy Zoo question 7: How rounded is it?
-    self.classifier_q7 = nn.Linear(C_prev, 3)
+    self.classifier_q7 = nn.Linear(fc1_size, 3)
 
     # Galaxy Zoo question 8: What is the odd feature?
-    self.classifier_q8 = nn.Linear(C_prev, 7)
+    self.classifier_q8 = nn.Linear(fc1_size, 7)
 
     # Galaxy Zoo question 9: Is Does the galaxy have a bulge?
-    self.classifier_q9 = nn.Linear(C_prev, 3)
+    self.classifier_q9 = nn.Linear(fc1_size, 3)
 
     # Galaxy Zoo question 10: How tightly wound is it?
-    self.classifier_q10 = nn.Linear(C_prev, 3)
+    self.classifier_q10 = nn.Linear(fc1_size, 3)
 
     # Galaxy Zoo question 11: How many spiral arms?
-    self.classifier_q11 = nn.Linear(C_prev, 6)
+    self.classifier_q11 = nn.Linear(fc1_size, 6)
 
     # initialize edge weights
     self._initialize_alphas()
@@ -255,19 +263,23 @@ class NetworkGalaxyZoo(Network):
         weights = F.softmax(self.alphas_normal, dim=-1)
       s0, s1 = s1, cell(s0, s1, weights)
     out = self.global_pooling(s1)
+    
+    # Fully connected layers
+    out_fc1 = self.fc1(out.view(out.size(0),-1))
+    # out_fc2 = self.fc1(out.view(out.size(0),-1))
 
     # Logits for classifiers on GalaxyZoo questions
-    logits_q1 = self.classifier_q1(out.view(out.size(0),-1))
-    logits_q2 = self.classifier_q2(out.view(out.size(0),-1))
-    logits_q3 = self.classifier_q3(out.view(out.size(0),-1))
-    logits_q4 = self.classifier_q4(out.view(out.size(0),-1))
-    logits_q5 = self.classifier_q5(out.view(out.size(0),-1))
-    logits_q6 = self.classifier_q6(out.view(out.size(0),-1))
-    logits_q7 = self.classifier_q7(out.view(out.size(0),-1))
-    logits_q8 = self.classifier_q8(out.view(out.size(0),-1))
-    logits_q9 = self.classifier_q9(out.view(out.size(0),-1))
-    logits_q10 = self.classifier_q10(out.view(out.size(0),-1))
-    logits_q11 = self.classifier_q11(out.view(out.size(0),-1))
+    logits_q1 = self.classifier_q1(out_fc1)
+    logits_q2 = self.classifier_q2(out_fc1)
+    logits_q3 = self.classifier_q3(out_fc1)
+    logits_q4 = self.classifier_q4(out_fc1)
+    logits_q5 = self.classifier_q5(out_fc1)
+    logits_q6 = self.classifier_q6(out_fc1)
+    logits_q7 = self.classifier_q7(out_fc1)
+    logits_q8 = self.classifier_q8(out_fc1)
+    logits_q9 = self.classifier_q9(out_fc1)
+    logits_q10 = self.classifier_q10(out_fc1)
+    logits_q11 = self.classifier_q11(out_fc1)
 
     # Classification probabilities for GalaxyZoo questions
     # Each output is a product of (probability classification is relevant) x (conditional probabilities)

@@ -129,11 +129,11 @@ def main():
 
     # training
     train_acc, train_obj = train(train_queue, valid_queue, model, architect, criterion, optimizer, lr, is_regression=is_regression)
-    logging.info('train_acc (R^2 for regression) %f', train_acc)
+    logging.info('training loss; accuracy or R2: %e %f', train_obj, train_acc)
 
     # validation
     valid_acc, valid_obj = infer(valid_queue, model, criterion, is_regression=is_regression)
-    logging.info('valid_acc (R^2 for regression) %f', valid_acc)
+    logging.info('validation loss; accuracy or R2: %e %f', valid_obj, valid_acc)
 
     utils.save(model, os.path.join(args.save, 'weights.pt'))
 
