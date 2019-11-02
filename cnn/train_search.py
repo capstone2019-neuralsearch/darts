@@ -24,6 +24,7 @@ parser = argparse.ArgumentParser("darts")
 parser.add_argument('--dataset', type=str, default='cifar', help='name of the dataset to use (e.g. cifar, mnist, graphene)')
 parser.add_argument('--data', type=str, default='../data', help='location of the data corpus')
 parser.add_argument('--batch_size', type=int, default=64, help='batch size')
+parser.add_argument('--optimizer', type=str, default='SGD', help='optimizer; one of SGD or Adam')
 parser.add_argument('--learning_rate', type=float, default=0.001, help='init learning rate')
 parser.add_argument('--learning_rate_min', type=float, default=0.0001, help='min learning rate')
 parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
@@ -100,16 +101,30 @@ def main():
   model = model.cuda()
   logging.info("param size = %fMB", utils.count_parameters_in_MB(model))
 
-  optimizer = torch.optim.SGD(
+  # build optimizer based on optimizer input; one of SGD or Adam
+  if args.optimizer == 'SGD':
+    optimizer = torch.optim.SGD(
       model.parameters(),
       args.learning_rate,
       momentum=args.momentum,
       weight_decay=args.weight_decay)
+  elif args.optimizer == 'Adam':
+    optimizer= torch.optim.Adam(
+      params=model.parameters(),
+      lr=args.learning_rate,
+      betas=(0.90, 0.999),
+      weight_decay=args.weight_decay)
+  else:
+    raise ValueError(f"Bad optimizer; got {args.optimizer}, must be one of 'SGD' or 'Adam'.")
 
   scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, float(args.epochs), eta_min=args.learning_rate_min)
 
   architect = Architect(model, args)
+  
+  # history of training and validation loss; 2 columns for loss and accuracy / R2
+  hist_trn = np.zeros((args.epochs, 2))
+  hist_val = np.zeros((args.epochs, 2))
 
   for epoch in range(args.epochs):
     scheduler.step()
@@ -129,13 +144,23 @@ def main():
 
     # training
     train_acc, train_obj = train(train_queue, valid_queue, model, architect, criterion, optimizer, lr, is_regression=is_regression)
-    logging.info('training loss; accuracy or R2: %e %f', train_obj, train_acc)
+    metric_name = 'accuracy' if not is_regression else 'R2'
+    logging.info(f'training loss; {metric_name}: {train_obj:e} {train_acc:f}')
+    # save history to numpy arrays
+    hist_trn[epoch] = [train_acc, train_obj]
+    np.save(os.path.join(args.save, 'hist_trn'), hist_trn)
 
     # validation
     valid_acc, valid_obj = infer(valid_queue, model, criterion, is_regression=is_regression)
-    logging.info('validation loss; accuracy or R2: %e %f', valid_obj, valid_acc)
-
+    logging.info(f'validation loss; {metric_name}: {valid_obj:e} {valid_acc:f}')
+    # save history to numpy arrays
+    hist_val[epoch] = [valid_acc, valid_obj]
+    np.save(os.path.join(args.save, 'hist_val'), hist_val)
+    
+    # save weights
     utils.save(model, os.path.join(args.save, 'weights.pt'))
+    
+    # save loss history
 
 
 def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr, is_regression=False):
