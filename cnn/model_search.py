@@ -3,9 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from operations import *
 from torch.autograd import Variable
-from genotypes import PRIMITIVES
+# from genotypes import PRIMITIVES
+from genotypes import PRIMITIVES_GZ as PRIMITIVES
 from genotypes import Genotype
-
 
 class MixedOp(nn.Module):
 
@@ -202,44 +202,43 @@ class NetworkGalaxyZoo(Network):
     
     # Fully connected layers
     fc1_size = 1024
-    # print(f'type(C_prev) = {type(C_prev)}')
-    self.fc1 = nn.Linear(C_prev, fc1_size)
-    # print(f'type(fc1) = {type(self.fc1)}')
     # fc2_size = 256
+    self.fc1 = nn.Linear(C_prev, fc1_size)
     # self.fc2 = nn.Linear(fc1_size, fc2_size)
+    fc_last_size = fc1_size
 
     # Galaxy Zoo question 1: smooth galaxy; galaxy with features or disk; elliptic
-    self.classifier_q1 = nn.Linear(fc1_size, 3)
+    self.classifier_q1 = nn.Linear(fc_last_size, 3)
 
     # Galaxy Zoo question 2: Is it edge on?
-    self.classifier_q2 = nn.Linear(fc1_size, 2)
+    self.classifier_q2 = nn.Linear(fc_last_size, 2)
 
     # Galaxy Zoo question 3: Is there a bar?
-    self.classifier_q3 = nn.Linear(fc1_size, 2)
+    self.classifier_q3 = nn.Linear(fc_last_size, 2)
 
     # Galaxy Zoo question 4: Is there a spiral pattern?
-    self.classifier_q4 = nn.Linear(fc1_size, 2)
+    self.classifier_q4 = nn.Linear(fc_last_size, 2)
 
     # Galaxy Zoo question 5: How prominent is the central bulge?
-    self.classifier_q5 = nn.Linear(fc1_size, 4)
+    self.classifier_q5 = nn.Linear(fc_last_size, 4)
 
     # Galaxy Zoo question 6: Is there anything odd?
-    self.classifier_q6 = nn.Linear(fc1_size, 2)
+    self.classifier_q6 = nn.Linear(fc_last_size, 2)
 
     # Galaxy Zoo question 7: How rounded is it?
-    self.classifier_q7 = nn.Linear(fc1_size, 3)
+    self.classifier_q7 = nn.Linear(fc_last_size, 3)
 
     # Galaxy Zoo question 8: What is the odd feature?
-    self.classifier_q8 = nn.Linear(fc1_size, 7)
+    self.classifier_q8 = nn.Linear(fc_last_size, 7)
 
     # Galaxy Zoo question 9: Is Does the galaxy have a bulge?
-    self.classifier_q9 = nn.Linear(fc1_size, 3)
+    self.classifier_q9 = nn.Linear(fc_last_size, 3)
 
     # Galaxy Zoo question 10: How tightly wound is it?
-    self.classifier_q10 = nn.Linear(fc1_size, 3)
+    self.classifier_q10 = nn.Linear(fc_last_size, 3)
 
     # Galaxy Zoo question 11: How many spiral arms?
-    self.classifier_q11 = nn.Linear(fc1_size, 6)
+    self.classifier_q11 = nn.Linear(fc_last_size, 6)
 
     # initialize edge weights
     self._initialize_alphas()
@@ -265,21 +264,23 @@ class NetworkGalaxyZoo(Network):
     out = self.global_pooling(s1)
     
     # Fully connected layers
-    out_fc1 = self.fc1(out.view(out.size(0),-1))
-    # out_fc2 = self.fc1(out.view(out.size(0),-1))
+    conv_out = out.view(out.size(0),-1)
+    fc1_out = self.fc1(conv_out)
+    # fc2_out = self.fc2(fc1_out)
+    fc_out = fc1_out
 
     # Logits for classifiers on GalaxyZoo questions
-    logits_q1 = self.classifier_q1(out_fc1)
-    logits_q2 = self.classifier_q2(out_fc1)
-    logits_q3 = self.classifier_q3(out_fc1)
-    logits_q4 = self.classifier_q4(out_fc1)
-    logits_q5 = self.classifier_q5(out_fc1)
-    logits_q6 = self.classifier_q6(out_fc1)
-    logits_q7 = self.classifier_q7(out_fc1)
-    logits_q8 = self.classifier_q8(out_fc1)
-    logits_q9 = self.classifier_q9(out_fc1)
-    logits_q10 = self.classifier_q10(out_fc1)
-    logits_q11 = self.classifier_q11(out_fc1)
+    logits_q1 = self.classifier_q1(fc_out)
+    logits_q2 = self.classifier_q2(fc_out)
+    logits_q3 = self.classifier_q3(fc_out)
+    logits_q4 = self.classifier_q4(fc_out)
+    logits_q5 = self.classifier_q5(fc_out)
+    logits_q6 = self.classifier_q6(fc_out)
+    logits_q7 = self.classifier_q7(fc_out)
+    logits_q8 = self.classifier_q8(fc_out)
+    logits_q9 = self.classifier_q9(fc_out)
+    logits_q10 = self.classifier_q10(fc_out)
+    logits_q11 = self.classifier_q11(fc_out)
 
     # Classification probabilities for GalaxyZoo questions
     # Each output is a product of (probability classification is relevant) x (conditional probabilities)
@@ -287,6 +288,12 @@ class NetworkGalaxyZoo(Network):
     probs_q1 = F.softmax(logits_q1, dim=-1)
     C1_1 = probs_q1[:,0:1]
     C1_2 = probs_q1[:,1:2]
+
+    # alternative method: follow Dieleman and use relu followed by "divisive normalization"
+    # this makes it easier for model to predict hard zeros
+    # normalizer = 1.0E-12
+    # logits_q1 = F.relu(logits_q1) + normalizer
+    # probs_q1 = logits_q1 / (torch.sum(logits_q1, dim=-1).view(-1,1))
 
     # A2 = C1.2 * C2
     probs_q2 = C1_2 * F.softmax(logits_q2, dim=-1)
