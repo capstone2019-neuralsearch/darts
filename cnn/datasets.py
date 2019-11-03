@@ -26,6 +26,16 @@ for dset_name_norm, dset_alias_list in VALID_DSET_NAMES.items():
     for dset_alias_name in dset_alias_list:
         DSET_NAME_TBL[dset_alias_name] = dset_name_norm
 
+# Default batch size for known data sets
+BATCH_SIZE_TBL = {
+    'CIFAR': 96,
+    'MNIST': 96,
+    'FashionMNIST': 96,
+    'GrapheneKirigami': 96,
+    'GalaxyZoo': 40,
+}
+
+# AWS storage bucket
 BUCKET_NAME = 'capstone2019-google'
 
 # *****************************************************************************

@@ -189,3 +189,17 @@ GRAPHENE = Genotype(
 	('sep_conv_5x5', 4), 
 	('sep_conv_3x3', 2)], 
 	reduce_concat=range(2, 6))
+    
+# Interim architecture for GalaxyZoo 2019-11-03
+GALAXY_ZOO = Genotype(
+    normal=[('max_pool_3x3', 0), ('dil_conv_5x5', 1), ('max_pool_3x3', 0), ('dil_conv_5x5', 2), ('max_pool_3x3', 0), ('dil_conv_5x5', 3), ('sep_conv_3x3', 3), ('max_pool_3x3', 0)], normal_concat=range(2, 6), 
+    reduce=[('max_pool_3x3', 1), ('max_pool_3x3', 0), ('max_pool_3x3', 0), ('max_pool_3x3', 2), ('dil_conv_5x5', 3), ('dil_conv_5x5', 2), ('max_pool_3x3', 2), ('sep_conv_3x3', 0)], reduce_concat=range(2, 6))    
+
+# Table of default architecture by standardized data set name
+GENOTYPE_TBL = {
+    'CIFAR': CIFAR_10,
+    'MNIST': MNIST,
+    'FashionMNIST': FASHION_MNIST,
+    'GrapheneKirigami': GRAPHENE,
+    'GalaxyZoo': GALAXY_ZOO,
+}

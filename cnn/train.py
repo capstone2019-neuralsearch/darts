@@ -14,17 +14,18 @@ import torchvision.datasets as dset
 import torch.backends.cudnn as cudnn
 
 from torch.autograd import Variable
-# TODO: possibly use different network
-from model import NetworkCIFAR
-from model_search import Network
-from datasets import load_dataset
+from model import NetworkCIFAR, NetworkGalaxyZoo
+from model_search import Network # for random search
+from datasets import load_dataset, DSET_NAME_TBL, BATCH_SIZE_TBL
+from genotypes import GENOTYPE_TBL
 from sklearn.metrics import r2_score
-
 
 parser = argparse.ArgumentParser("darts")
 parser.add_argument('--dataset', type=str, default='cifar', help='name of the dataset to use (e.g. cifar, mnist, graphene)')
 parser.add_argument('--data', type=str, default='../data', help='location of the data corpus')
-parser.add_argument('--batch_size', type=int, default=96, help='batch size')
+parser.add_argument('--batch_size', type=int, default=0, 
+                    help='batch size; default of 0 looks up defaults per data set in datasets.py BATCH_SIZE_TBL')
+parser.add_argument('--optimizer', type=str, default='Adam', help='optimizer; one of SGD or Adam')
 parser.add_argument('--learning_rate', type=float, default=0.001, help='init learning rate')
 parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
 parser.add_argument('--weight_decay', type=float, default=3e-4, help='weight decay')
@@ -41,7 +42,8 @@ parser.add_argument('--cutout_length', type=int, default=16, help='cutout length
 parser.add_argument('--drop_path_prob', type=float, default=0.2, help='drop path probability')
 parser.add_argument('--save', type=str, default='EXP', help='experiment name')
 parser.add_argument('--seed', type=int, default=0, help='random seed')
-parser.add_argument('--arch', type=str, default='DARTS', help='which architecture to use')
+parser.add_argument('--arch', type=str, default='DATASET', 
+                    help='which architecture to use; default is lookup by dataset name')
 parser.add_argument('--grad_clip', type=float, default=5, help='gradient clipping')
 parser.add_argument('--random', action="store_true", default=False, help='train a random cell')
 args = parser.parse_args()
@@ -57,6 +59,9 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO,
 fh = logging.FileHandler(os.path.join(args.save, 'log.txt'))
 fh.setFormatter(logging.Formatter(log_format))
 logging.getLogger().addHandler(fh)
+
+# Get normalized dataset name
+dataset = DSET_NAME_TBL[args.dataset.lower().strip()]
 
 def main():
   if not torch.cuda.is_available():
@@ -88,6 +93,10 @@ def main():
 
     # We can now set the random seed.
     torch.manual_seed(args.seed)
+  # If the architecture was the default DATASET, look up the architecture corresponding to this dataset
+  elif args.arch == 'DATASET':
+    genotype = GENOTYPE_TBL[dataset]
+    print(f'using genotype for {dataset}')
   else:
     try:  
       genotype = eval("genotypes.%s" % args.arch)
@@ -95,25 +104,47 @@ def main():
       genotype = genotypes.load_genotype_from_file(args.arch)
 
   genotypes.save_genotype_to_file(genotype, os.path.join(args.save, "genotype.arch"))
-  model = NetworkCIFAR(args.init_channels, OUTPUT_DIM, args.layers, args.auxiliary, genotype, num_channels=IN_CHANNELS)
+  # Set the inference network; default is NetworkCifar10; supported alternatives NetworkGalaxyZoo
+  if dataset == 'GalaxyZoo':
+    model = NetworkGalaxyZoo(C=args.init_channels, num_classes=OUTPUT_DIM, layers=args.layers, genotype=genotype, 
+                             fc1_size=1024, fc2_size=1024, num_channels=IN_CHANNELS)
+  else:
+    model = NetworkCIFAR(args.init_channels, OUTPUT_DIM, args.layers, args.auxiliary, genotype, num_channels=IN_CHANNELS)
   model = model.cuda()
 
   logging.info("param size = %fMB", utils.count_parameters_in_MB(model))
 
   criterion = criterion.cuda()
 
-  optimizer = torch.optim.SGD(
+  # build optimizer based on optimizer input; one of SGD or Adam
+  if args.optimizer == 'SGD':
+    optimizer = torch.optim.SGD(
       model.parameters(),
       args.learning_rate,
       momentum=args.momentum,
-      weight_decay=args.weight_decay
-      )
+      weight_decay=args.weight_decay)
+  elif args.optimizer == 'Adam':
+    optimizer= torch.optim.Adam(
+    params=model.parameters(),
+    lr=args.learning_rate,
+    betas=(0.90, 0.999),
+    weight_decay=args.weight_decay)
+  else:
+    raise ValueError(f"Bad optimizer; got {args.optimizer}, must be one of 'SGD' or 'Adam'.")
+
+  # If batch size was not input manually, look up default batch size for this data set
+  if args.batch_size > 0:
+    batch_size = args.batch_size
+    # print(f'Using input batch_size = {batch_size}')
+  else:
+    batch_size = BATCH_SIZE_TBL[dataset]
+    print(f'Using default batch_size = {batch_size}')
 
   train_queue = torch.utils.data.DataLoader(
-      train_data, batch_size=args.batch_size, shuffle=True, pin_memory=True, num_workers=2)
+      train_data, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=2)
 
   valid_queue = torch.utils.data.DataLoader(
-      valid_data, batch_size=args.batch_size, shuffle=False, pin_memory=True, num_workers=2)
+      valid_data, batch_size=batch_size, shuffle=False, pin_memory=True, num_workers=2)
 
   scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, float(args.epochs))
 

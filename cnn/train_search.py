@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser("darts")
 parser.add_argument('--dataset', type=str, default='cifar', help='name of the dataset to use (e.g. cifar, mnist, graphene)')
 parser.add_argument('--data', type=str, default='../data', help='location of the data corpus')
 parser.add_argument('--batch_size', type=int, default=64, help='batch size')
-parser.add_argument('--optimizer', type=str, default='SGD', help='optimizer; one of SGD or Adam')
+parser.add_argument('--optimizer', type=str, default='Adam', help='optimizer; one of SGD or Adam')
 parser.add_argument('--primitives', type=str, default='Default', 
                     help='set of primitive operations for arch search; defined in genotypes.py')
 parser.add_argument('--learning_rate', type=float, default=0.001, help='init learning rate')
