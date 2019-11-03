@@ -16,7 +16,7 @@ import torch.backends.cudnn as cudnn
 from torch.autograd import Variable
 from model_search import Network, NetworkGalaxyZoo
 from architect import Architect
-from datasets import load_dataset, VALID_DSET_NAMES
+from datasets import load_dataset, DSET_NAME_TBL
 from sklearn.metrics import r2_score
 
 
@@ -25,10 +25,12 @@ parser.add_argument('--dataset', type=str, default='cifar', help='name of the da
 parser.add_argument('--data', type=str, default='../data', help='location of the data corpus')
 parser.add_argument('--batch_size', type=int, default=64, help='batch size')
 parser.add_argument('--optimizer', type=str, default='SGD', help='optimizer; one of SGD or Adam')
+parser.add_argument('--primitives', type=str, default='Default', 
+                    help='set of primitive operations for arch search; defined in genotypes.py')
 parser.add_argument('--learning_rate', type=float, default=0.001, help='init learning rate')
 parser.add_argument('--learning_rate_min', type=float, default=0.0001, help='min learning rate')
 parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
-parser.add_argument('--weight_decay', type=float, default=3e-4, help='weight decay')
+parser.add_argument('--weight_decay', type=float, default=0.0, help='weight decay')
 parser.add_argument('--report_freq', type=float, default=50, help='report frequency')
 parser.add_argument('--gpu', type=int, default=0, help='gpu device id')
 parser.add_argument('--epochs', type=int, default=50, help='num of training epochs')
@@ -59,10 +61,16 @@ fh = logging.FileHandler(os.path.join(args.save, 'log.txt'))
 fh.setFormatter(logging.Formatter(log_format))
 logging.getLogger().addHandler(fh)
 
+# Get normalized dataset name
+dataset = DSET_NAME_TBL[args.dataset.lower().strip()]
+
 # In the special case that the dataset is GalaxyZoo, overwrite Network with GalaxyZooNetwork
 # unless the user specified gz_regression
-if (args.dataset in VALID_DSET_NAMES['GalaxyZoo']) and not args.gz_regression:
+if (dataset == 'GalaxyZoo') and not args.gz_regression:
    Network = NetworkGalaxyZoo
+   
+# If the default set of primitives is requested, use the normalized name of the dataset
+primitives_name = dataset if args.primitives == 'Default' else args.primitives
 
 def main():
   if not torch.cuda.is_available():
@@ -97,7 +105,8 @@ def main():
   criterion = nn.CrossEntropyLoss() if not is_regression else nn.MSELoss()
   criterion = criterion.cuda()
 
-  model = Network(args.init_channels, OUTPUT_DIM, args.layers, criterion, num_channels=IN_CHANNELS)
+  model = Network(C=args.init_channels, num_classes=OUTPUT_DIM, primitives_name=primitives_name, layers=args.layers, criterion=criterion, 
+                  num_channels=IN_CHANNELS)
   model = model.cuda()
   logging.info("param size = %fMB", utils.count_parameters_in_MB(model))
 

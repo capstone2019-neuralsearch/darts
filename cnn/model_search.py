@@ -4,15 +4,17 @@ import torch.nn.functional as F
 from operations import *
 from torch.autograd import Variable
 # from genotypes import PRIMITIVES
-from genotypes import PRIMITIVES_GZ as PRIMITIVES
+from genotypes import PRIMITIVES_TBL
 from genotypes import Genotype
 
 class MixedOp(nn.Module):
 
-  def __init__(self, C, stride):
+  def __init__(self, C, stride, primitives_name: str):
     super(MixedOp, self).__init__()
     self._ops = nn.ModuleList()
-    for primitive in PRIMITIVES:
+    # Look up collection of primitives
+    self.PRIMITIVES = PRIMITIVES_TBL[primitives_name]
+    for primitive in self.PRIMITIVES:
       op = OPS[primitive](C, stride, False)
       if 'pool' in primitive:
         op = nn.Sequential(op, nn.BatchNorm2d(C, affine=False))
@@ -24,8 +26,9 @@ class MixedOp(nn.Module):
 
 class Cell(nn.Module):
 
-  def __init__(self, steps, multiplier, C_prev_prev, C_prev, C, reduction, reduction_prev):
+  def __init__(self, primitives_name: str, steps, multiplier, C_prev_prev, C_prev, C, reduction, reduction_prev):
     super(Cell, self).__init__()
+    self.PRIMITIVES = PRIMITIVES_TBL[primitives_name]
     self.reduction = reduction
 
     if reduction_prev:
@@ -41,7 +44,7 @@ class Cell(nn.Module):
     for i in range(self._steps):
       for j in range(2+i):
         stride = 2 if reduction and j < 2 else 1
-        op = MixedOp(C, stride)
+        op = MixedOp(C=C, stride=stride, primitives_name=primitives_name)
         self._ops.append(op)
 
   def forward(self, s0, s1, weights):
@@ -60,15 +63,17 @@ class Cell(nn.Module):
 
 class Network(nn.Module):
 
-  def __init__(self, C, num_classes, layers, criterion, num_channels=3, steps=4, multiplier=4, stem_multiplier=3):
+  def __init__(self, C, num_classes, layers, primitives_name: str, criterion, num_channels=3, steps=4, multiplier=4, stem_multiplier=3):
     super(Network, self).__init__()
     self._C = C
     self._num_classes = num_classes
     self._layers = layers
+    self._primitives_name = primitives_name
     self._criterion = criterion
     self._steps = steps
     self._multiplier = multiplier
     self._num_channels = num_channels
+    self.PRIMITIVES = PRIMITIVES_TBL[primitives_name]
 
     C_curr = stem_multiplier*C
     self.stem = nn.Sequential(
@@ -86,7 +91,8 @@ class Network(nn.Module):
         reduction = True
       else:
         reduction = False
-      cell = Cell(steps, multiplier, C_prev_prev, C_prev, C_curr, reduction, reduction_prev)
+      cell = Cell(primitives_name=primitives_name, steps=steps, multiplier=multiplier, 
+                  C_prev_prev=C_prev_prev, C_prev=C_prev, C=C_curr, reduction=reduction, reduction_prev=reduction_prev)
       reduction_prev = reduction
       self.cells += [cell]
       C_prev_prev, C_prev = C_prev, multiplier*C_curr
@@ -97,7 +103,8 @@ class Network(nn.Module):
     self._initialize_alphas()
 
   def new(self):
-    model_new = Network(self._C, self._num_classes, self._layers, self._criterion, num_channels=self._num_channels).cuda()
+    model_new = Network(C=self._C, num_classes=self._num_classes, layers=self._layers, primitives_name=self._primitives_name,
+                        criterion=self._criterion, num_channels=self._num_channels).cuda()
     for x, y in zip(model_new.arch_parameters(), self.arch_parameters()):
         x.data.copy_(y.data)
     return model_new
@@ -120,7 +127,7 @@ class Network(nn.Module):
 
   def _initialize_alphas(self):
     k = sum(1 for i in range(self._steps) for n in range(2+i))
-    num_ops = len(PRIMITIVES)
+    num_ops = len(PRIMITIVES_TBL[self._primitives_name])
 
     self.alphas_normal = Variable(1e-3*torch.randn(k, num_ops).cuda(), requires_grad=True)
     self.alphas_reduce = Variable(1e-3*torch.randn(k, num_ops).cuda(), requires_grad=True)
@@ -141,14 +148,14 @@ class Network(nn.Module):
       for i in range(self._steps):
         end = start + n
         W = weights[start:end].copy()
-        edges = sorted(range(i + 2), key=lambda x: -max(W[x][k] for k in range(len(W[x])) if k != PRIMITIVES.index('none')))[:2]
+        edges = sorted(range(i + 2), key=lambda x: -max(W[x][k] for k in range(len(W[x])) if k != self.PRIMITIVES.index('none')))[:2]
         for j in edges:
           k_best = None
           for k in range(len(W[j])):
-            if k != PRIMITIVES.index('none'):
+            if k != self.PRIMITIVES.index('none'):
               if k_best is None or W[j][k] > W[j][k_best]:
                 k_best = k
-          gene.append((PRIMITIVES[k_best], j))
+          gene.append((self.PRIMITIVES[k_best], j))
         start = end
         n += 1
       return gene
@@ -167,15 +174,21 @@ class Network(nn.Module):
 class NetworkGalaxyZoo(Network):
   """Subclass of Network specialized for the GalaxyZoo problem"""
 
-  def __init__(self, C, num_classes, layers, criterion, num_channels=3, steps=4, multiplier=4, stem_multiplier=3):
-    super(Network, self).__init__()
+  def __init__(self, primitives_name: str, C, num_classes, layers, criterion, 
+               num_channels=3, steps=4, multiplier=4, stem_multiplier=3):
+    # super(Network, self).__init__()
+    # Network.__init__(self, C=C, num_classes=num_classes, layers=layers, primitives_name=primitives_name,
+    #                 criterion=criterion, num_channels=num_channels)
+    nn.Module.__init__(self)
     self._C = C
     self._num_classes = num_classes
     self._layers = layers
+    self._primitives_name = primitives_name
     self._criterion = criterion
     self._steps = steps
     self._multiplier = multiplier
     self._num_channels = num_channels
+    self.PRIMITIVES = PRIMITIVES_TBL[primitives_name]
 
     C_curr = stem_multiplier*C
     self.stem = nn.Sequential(
@@ -193,7 +206,8 @@ class NetworkGalaxyZoo(Network):
         reduction = True
       else:
         reduction = False
-      cell = Cell(steps, multiplier, C_prev_prev, C_prev, C_curr, reduction, reduction_prev)
+      cell = Cell(primitives_name=primitives_name, steps=steps, multiplier=multiplier, 
+                  C_prev_prev=C_prev_prev, C_prev=C_prev, C=C_curr, reduction=reduction, reduction_prev=reduction_prev)
       reduction_prev = reduction
       self.cells += [cell]
       C_prev_prev, C_prev = C_prev, multiplier*C_curr
@@ -202,9 +216,9 @@ class NetworkGalaxyZoo(Network):
     
     # Fully connected layers
     fc1_size = 1024
-    # fc2_size = 256
+    fc2_size = 1024
     self.fc1 = nn.Linear(C_prev, fc1_size)
-    # self.fc2 = nn.Linear(fc1_size, fc2_size)
+    self.fc2 = nn.Linear(fc1_size, fc2_size)
     fc_last_size = fc1_size
 
     # Galaxy Zoo question 1: smooth galaxy; galaxy with features or disk; elliptic
@@ -244,7 +258,9 @@ class NetworkGalaxyZoo(Network):
     self._initialize_alphas()
 
   def new(self):
-    model_new = NetworkGalaxyZoo(self._C, self._num_classes, self._layers, self._criterion, num_channels=self._num_channels).cuda()
+    model_new = NetworkGalaxyZoo(
+        C=self._C, num_classes=self._num_classes, layers=self._layers, primitives_name=self._primitives_name,
+        criterion=self._criterion, num_channels=self._num_channels).cuda()
     for x, y in zip(model_new.arch_parameters(), self.arch_parameters()):
         x.data.copy_(y.data)
     return model_new
@@ -266,8 +282,8 @@ class NetworkGalaxyZoo(Network):
     # Fully connected layers
     conv_out = out.view(out.size(0),-1)
     fc1_out = self.fc1(conv_out)
-    # fc2_out = self.fc2(fc1_out)
-    fc_out = fc1_out
+    fc2_out = self.fc2(fc1_out)
+    fc_out = fc2_out
 
     # Logits for classifiers on GalaxyZoo questions
     logits_q1 = self.classifier_q1(fc_out)

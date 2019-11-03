@@ -15,7 +15,8 @@ def load_genotype_from_file(filename):
     return eval(f.readline().strip())
 
 
-PRIMITIVES = [
+# Default set of primitives
+primitives_Default = [
     'none',
     'max_pool_3x3',
     'avg_pool_3x3',
@@ -26,7 +27,8 @@ PRIMITIVES = [
     'dil_conv_5x5'
 ]
 
-PRIMITIVES_GZ = [
+# Primitives for Galaxy Zoo data set
+primitives_GalaxyZoo = [
     'none',
     'skip_connect',
     'max_pool_2x2',
@@ -38,6 +40,16 @@ PRIMITIVES_GZ = [
     'dil_conv_3x3',
     'dil_conv_5x5'
 ]
+
+# Dictionary of primitive sets
+PRIMITIVES_TBL = {
+    'Default': primitives_Default,
+    'CIFAR': primitives_Default,
+    'MNIST': primitives_Default,
+    'FashionMNIST': primitives_Default,
+    'GrapheneKirigami': primitives_Default,
+    'GalaxyZoo': primitives_GalaxyZoo
+}
 
 NASNet = Genotype(
   normal = [

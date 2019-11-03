@@ -20,6 +20,12 @@ VALID_DSET_NAMES = {
     'GalaxyZoo': ['galaxy-zoo', 'galaxyzoo']
 }
 
+# Table to normalize data set name; key = aliased name, value = canonical dataset name
+DSET_NAME_TBL = dict()
+for dset_name_norm, dset_alias_list in VALID_DSET_NAMES.items():
+    for dset_alias_name in dset_alias_list:
+        DSET_NAME_TBL[dset_alias_name] = dset_name_norm
+
 BUCKET_NAME = 'capstone2019-google'
 
 # *****************************************************************************
