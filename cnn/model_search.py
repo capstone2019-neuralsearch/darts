@@ -175,7 +175,7 @@ class NetworkGalaxyZoo(Network):
   """Subclass of Network specialized for the GalaxyZoo problem"""
 
   def __init__(self, primitives_name: str, C, num_classes, layers, criterion, 
-               num_channels=3, steps=4, multiplier=4, stem_multiplier=3):
+               fc1_size: int, fc2_size: int, num_channels=3, steps=4, multiplier=4, stem_multiplier=3):
     # super(Network, self).__init__()
     # Network.__init__(self, C=C, num_classes=num_classes, layers=layers, primitives_name=primitives_name,
     #                 criterion=criterion, num_channels=num_channels)
@@ -215,8 +215,6 @@ class NetworkGalaxyZoo(Network):
     self.global_pooling = nn.AdaptiveAvgPool2d(1)
     
     # Fully connected layers
-    fc1_size = 1024
-    fc2_size = 1024
     self.fc1 = nn.Linear(C_prev, fc1_size)
     self.fc2 = nn.Linear(fc1_size, fc2_size)
     fc_last_size = fc1_size

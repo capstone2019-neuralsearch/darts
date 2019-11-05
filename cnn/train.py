@@ -16,15 +16,15 @@ import torch.backends.cudnn as cudnn
 from torch.autograd import Variable
 from model import NetworkCIFAR, NetworkGalaxyZoo
 from model_search import Network # for random search
-from datasets import load_dataset, DSET_NAME_TBL, BATCH_SIZE_TBL
+from datasets import load_dataset, DSET_NAME_TBL
 from genotypes import GENOTYPE_TBL
 from sklearn.metrics import r2_score
 
 parser = argparse.ArgumentParser("darts")
 parser.add_argument('--dataset', type=str, default='cifar', help='name of the dataset to use (e.g. cifar, mnist, graphene)')
 parser.add_argument('--data', type=str, default='../data', help='location of the data corpus')
-parser.add_argument('--batch_size', type=int, default=0, 
-                    help='batch size; default of 0 looks up defaults per data set in datasets.py BATCH_SIZE_TBL')
+parser.add_argument('--val_portion', type=float, default=0.1, help='portion of validation data')
+parser.add_argument('--batch_size', type=int, default=64, help='batch size')
 parser.add_argument('--optimizer', type=str, default='Adam', help='optimizer; one of SGD or Adam')
 parser.add_argument('--learning_rate', type=float, default=0.001, help='init learning rate')
 parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
@@ -44,6 +44,8 @@ parser.add_argument('--save', type=str, default='EXP', help='experiment name')
 parser.add_argument('--seed', type=int, default=0, help='random seed')
 parser.add_argument('--arch', type=str, default='DATASET', 
                     help='which architecture to use; default is lookup by dataset name')
+parser.add_argument('--fc1_size', type=int, default=1024, help='number of units in fully connected layer 1')
+parser.add_argument('--fc2_size', type=int, default=1024, help='number of units in fully connected layer 2')
 parser.add_argument('--grad_clip', type=float, default=5, help='gradient clipping')
 parser.add_argument('--random', action="store_true", default=False, help='train a random cell')
 args = parser.parse_args()
@@ -83,7 +85,9 @@ def main():
   logging.info("args = %s", args)
 
   train_data, OUTPUT_DIM, IN_CHANNELS, is_regression = load_dataset(args, train=True)
-  valid_data, _, _, _ = load_dataset(args, train=False)
+
+  # train_data, OUTPUT_DIM, IN_CHANNELS, is_regression = load_dataset(args, train=True)
+  # valid_data, _, _, _ = load_dataset(args, train=False)
 
   criterion = nn.CrossEntropyLoss() if not is_regression else nn.MSELoss()
 
@@ -107,7 +111,7 @@ def main():
   # Set the inference network; default is NetworkCifar10; supported alternatives NetworkGalaxyZoo
   if dataset == 'GalaxyZoo':
     model = NetworkGalaxyZoo(C=args.init_channels, num_classes=OUTPUT_DIM, layers=args.layers, genotype=genotype, 
-                             fc1_size=1024, fc2_size=1024, num_channels=IN_CHANNELS)
+                             fc1_size=args.fc1_size, fc2_size=args.fc2_size, num_channels=IN_CHANNELS)
   else:
     model = NetworkCIFAR(args.init_channels, OUTPUT_DIM, args.layers, args.auxiliary, genotype, num_channels=IN_CHANNELS)
   model = model.cuda()
@@ -132,33 +136,58 @@ def main():
   else:
     raise ValueError(f"Bad optimizer; got {args.optimizer}, must be one of 'SGD' or 'Adam'.")
 
-  # If batch size was not input manually, look up default batch size for this data set
-  if args.batch_size > 0:
-    batch_size = args.batch_size
-    # print(f'Using input batch_size = {batch_size}')
-  else:
-    batch_size = BATCH_SIZE_TBL[dataset]
-    print(f'Using default batch_size = {batch_size}')
+  # train_queue = torch.utils.data.DataLoader(
+      # train_data, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=2)
+
+  # valid_queue = torch.utils.data.DataLoader(
+      # valid_data, batch_size=batch_size, shuffle=False, pin_memory=True, num_workers=2)
+
+  # Split training data into training and validation queues
+  # Can't use test set for validation on GalaxyZoo because test labels unavailable (can only upload to Kaggle)
+  num_train = len(train_data)
+  indices = list(range(num_train))
+  train_portion = 1.0 - args.val_portion
+  split = int(np.floor(train_portion * num_train))
 
   train_queue = torch.utils.data.DataLoader(
-      train_data, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=2)
+      train_data, batch_size=args.batch_size,
+      sampler=torch.utils.data.sampler.SubsetRandomSampler(indices[:split]),
+      pin_memory=True, num_workers=2)
 
   valid_queue = torch.utils.data.DataLoader(
-      valid_data, batch_size=batch_size, shuffle=False, pin_memory=True, num_workers=2)
+      train_data, batch_size=args.batch_size,
+      sampler=torch.utils.data.sampler.SubsetRandomSampler(indices[split:num_train]),
+      pin_memory=True, num_workers=2)
 
-  scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, float(args.epochs))
+  # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, float(args.epochs))
+
+  # history of training and validation loss; 2 columns for loss and accuracy / R2
+  hist_trn = np.zeros((args.epochs, 2))
+  hist_val = np.zeros((args.epochs, 2))
+  metric_name = 'accuracy' if not is_regression else 'R2'
 
   for epoch in range(args.epochs):
-    scheduler.step()
-    logging.info('epoch %d lr %e', epoch, scheduler.get_lr()[0])
-    model.drop_path_prob = args.drop_path_prob * epoch / args.epochs
+    # scheduler.step()
+    # logging.info('epoch %d lr %e', epoch, scheduler.get_lr()[0])
+    logging.info('epoch %d lr %e', epoch, args.learning_rate)
+    # model.drop_path_prob = args.drop_path_prob * epoch / args.epochs
+    model.drop_path_prob = args.drop_path_prob
 
+    # training results
     train_acc, train_obj = train(train_queue, model, criterion, optimizer, is_regression=is_regression)
-    logging.info('train_acc (R^2 for regression) %f', train_acc)
+    logging.info(f'training loss; {metric_name}: {train_obj:e} {train_acc:f}')
+    # save history to numpy arrays
+    hist_trn[epoch] = [train_acc, train_obj]
+    np.save(os.path.join(args.save, 'hist_trn'), hist_trn)
 
+    # validation results
     valid_acc, valid_obj = infer(valid_queue, model, criterion, is_regression=is_regression)
-    logging.info('valid_acc (R^2 for regression) %f', valid_acc)
+    logging.info(f'validation loss; {metric_name}: {valid_obj:e} {valid_acc:f}')
+    # save history to numpy arrays
+    hist_val[epoch] = [valid_acc, valid_obj]
+    np.save(os.path.join(args.save, 'hist_val'), hist_val)
 
+    # save current model weights
     utils.save(model, os.path.join(args.save, 'weights.pt'))
 
 

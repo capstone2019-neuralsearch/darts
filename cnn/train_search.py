@@ -30,7 +30,7 @@ parser.add_argument('--primitives', type=str, default='Default',
 parser.add_argument('--learning_rate', type=float, default=0.001, help='init learning rate')
 parser.add_argument('--learning_rate_min', type=float, default=0.0001, help='min learning rate')
 parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
-parser.add_argument('--weight_decay', type=float, default=0.0, help='weight decay')
+parser.add_argument('--weight_decay', type=float, default=1.0E-6, help='weight decay')
 parser.add_argument('--report_freq', type=float, default=50, help='report frequency')
 parser.add_argument('--gpu', type=int, default=0, help='gpu device id')
 parser.add_argument('--epochs', type=int, default=50, help='num of training epochs')
@@ -45,8 +45,10 @@ parser.add_argument('--seed', type=int, default=2, help='random seed')
 parser.add_argument('--grad_clip', type=float, default=5, help='gradient clipping')
 parser.add_argument('--train_portion', type=float, default=0.5, help='portion of training data')
 parser.add_argument('--unrolled', action='store_true', default=True, help='use one-step unrolled validation loss')
-parser.add_argument('--arch_learning_rate', type=float, default=3e-4, help='learning rate for arch encoding')
-parser.add_argument('--arch_weight_decay', type=float, default=1e-3, help='weight decay for arch encoding')
+parser.add_argument('--arch_learning_rate', type=float, default=1.0e-3, help='learning rate for arch encoding')
+parser.add_argument('--arch_weight_decay', type=float, default=1.0e-6, help='weight decay for arch encoding')
+parser.add_argument('--fc1_size', type=int, default=1024, help='number of units in fully connected layer 1')
+parser.add_argument('--fc2_size', type=int, default=1024, help='number of units in fully connected layer 2')
 parser.add_argument('--gz_regression', action='store_true', default=False, 
                     help='run GalaxyZoo as a standard regression (default True follows custom GZ decision tree)')
 args = parser.parse_args()
@@ -64,10 +66,6 @@ logging.getLogger().addHandler(fh)
 # Get normalized dataset name
 dataset = DSET_NAME_TBL[args.dataset.lower().strip()]
 
-# In the special case that the dataset is GalaxyZoo, overwrite Network with GalaxyZooNetwork
-# unless the user specified gz_regression
-if (dataset == 'GalaxyZoo') and not args.gz_regression:
-   Network = NetworkGalaxyZoo
    
 # If the default set of primitives is requested, use the normalized name of the dataset
 primitives_name = dataset if args.primitives == 'Default' else args.primitives
@@ -105,8 +103,16 @@ def main():
   criterion = nn.CrossEntropyLoss() if not is_regression else nn.MSELoss()
   criterion = criterion.cuda()
 
-  model = Network(C=args.init_channels, num_classes=OUTPUT_DIM, primitives_name=primitives_name, layers=args.layers, criterion=criterion, 
-                  num_channels=IN_CHANNELS)
+  # In the special case that the dataset is GalaxyZoo, overwrite Network with GalaxyZooNetwork
+  # unless the user specified gz_regression
+  if (dataset == 'GalaxyZoo') and not args.gz_regression:
+    model = Network(C=args.init_channels, num_classes=OUTPUT_DIM, primitives_name=primitives_name, 
+                    layers=args.layers, criterion=criterion, num_channels=IN_CHANNELS)
+  else:
+    model = NetworkGalaxyZoo(C=args.init_channels, num_classes=OUTPUT_DIM, primitives_name=primitives_name, 
+                             layers=args.layers, criterion=criterion, 
+                             fc1_size=fc1_size, fc2_size=fc2_size,
+                             num_channels=IN_CHANNELS)
   model = model.cuda()
   logging.info("param size = %fMB", utils.count_parameters_in_MB(model))
 
@@ -134,6 +140,7 @@ def main():
   # history of training and validation loss; 2 columns for loss and accuracy / R2
   hist_trn = np.zeros((args.epochs, 2))
   hist_val = np.zeros((args.epochs, 2))
+  metric_name = 'accuracy' if not is_regression else 'R2'
 
   for epoch in range(args.epochs):
     scheduler.step()
@@ -153,7 +160,6 @@ def main():
 
     # training
     train_acc, train_obj = train(train_queue, valid_queue, model, architect, criterion, optimizer, lr, is_regression=is_regression)
-    metric_name = 'accuracy' if not is_regression else 'R2'
     logging.info(f'training loss; {metric_name}: {train_obj:e} {train_acc:f}')
     # save history to numpy arrays
     hist_trn[epoch] = [train_acc, train_obj]

@@ -215,6 +215,23 @@ class NetworkImageNet(nn.Module):
     return logits, logits_aux
 
 
+class Maxout(nn.Module):
+
+    def __init__(self, d_in, d_out, pool_size):
+        super().__init__()
+        self.d_in, self.d_out, self.pool_size = d_in, d_out, pool_size
+        self.lin = nn.Linear(d_in, d_out * pool_size)
+
+
+    def forward(self, inputs):
+        shape = list(inputs.size())
+        shape[-1] = self.d_out
+        shape.append(self.pool_size)
+        max_dim = len(shape) - 1
+        out = self.lin(inputs)
+        m, i = out.view(*shape).max(max_dim)
+        return m
+        
 class NetworkGalaxyZoo(nn.Module):
 
   def __init__(self, C, num_classes, layers, genotype, fc1_size: int, fc2_size: int, num_channels=3):
@@ -248,8 +265,10 @@ class NetworkGalaxyZoo(nn.Module):
     # Fully connected layers
     self.num_fc_layers = 2 if fc2_size > 0 else 1
     self.fc1 = nn.Linear(C_prev, fc1_size)
+    # self.fc1 = Maxout(C_prev, fc1_size, 2)
     if self.num_fc_layers >= 2:
         self.fc2 = nn.Linear(fc1_size, fc2_size)
+        # self.fc2 = Maxout(fc1_size, fc2_size, 2)
     fc_last_size = fc2_size if self.num_fc_layers == 2 else fc1_size
 
     # Galaxy Zoo question 1: smooth galaxy; galaxy with features or disk; elliptic
