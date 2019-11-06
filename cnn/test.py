@@ -57,7 +57,10 @@ def main():
   logging.info('gpu device = %d' % args.gpu)
   logging.info("args = %s", args)
 
-  genotype = eval("genotypes.%s" % args.arch)
+  try:  
+    genotype = eval("genotypes.%s" % args.arch)
+  except (AttributeError, SyntaxError):
+    genotype = genotypes.load_genotype_from_file(args.arch)
 
   test_data, OUTPUT_DIM, IN_CHANNELS, is_regression = load_dataset(args, train=False)
 
@@ -77,6 +80,10 @@ def main():
   model.drop_path_prob = args.drop_path_prob
   test_acc, test_obj = infer(test_queue, model, criterion, is_regression=is_regression)
   logging.info('test_acc (R^2 for regression) %f', test_acc)
+
+  weights_foldername = os.path.dirname(args.model_path)
+  with open(os.path.join(weights_foldername, "test.txt"), "w") as f:
+    f.write(str(test_acc))
 
 
 def infer(test_queue, model, criterion, is_regression=False):
