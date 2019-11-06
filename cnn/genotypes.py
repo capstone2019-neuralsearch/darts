@@ -190,11 +190,27 @@ GRAPHENE = Genotype(
 	('sep_conv_3x3', 2)], 
 	reduce_concat=range(2, 6))
     
-# Best discovered architecture for GalaxyZoo 2019-11-03
-# 2019-11-04 00:26:47,645 validation loss; R2: 9.110350e-03
+# Best discovered architecture for GalaxyZoo 2019-11-05
+# 2019-11-05 09:18:10,861 validation loss; R2: 8.993143e-03 -0.243955
 GALAXY_ZOO = Genotype(
-    normal=[('max_pool_2x2', 0), ('max_pool_2x2', 1), ('max_pool_2x2', 2), ('max_pool_2x2', 0), ('max_pool_3x3', 0), ('sep_conv_5x5', 3), ('dil_conv_5x5', 4), ('max_pool_3x3', 1)], normal_concat=range(2, 6), 
-    reduce=[('max_pool_3x3', 1), ('max_pool_3x3', 0), ('sep_conv_5x5', 0), ('dil_conv_5x5', 2), ('dil_conv_5x5', 3), ('dil_conv_5x5', 2), ('dil_conv_5x5', 2), ('dil_conv_5x5', 4)], reduce_concat=range(2, 6))
+    normal=[('dil_conv_3x3', 0), 
+            ('dil_conv_5x5', 1), 
+            ('dil_conv_5x5', 2), 
+            ('max_pool_2x2', 0), 
+            ('dil_conv_5x5', 0), 
+            ('sep_conv_5x5', 2), 
+            ('sep_conv_5x5', 4), 
+            ('max_pool_3x3', 1)], 
+            normal_concat=range(2, 6), 
+    reduce=[('max_pool_3x3', 0), 
+            ('max_pool_3x3', 1), 
+            ('max_pool_3x3', 0), 
+            ('dil_conv_5x5', 2), 
+            ('dil_conv_5x5', 2), 
+            ('dil_conv_5x5', 3), 
+            ('dil_conv_5x5', 4), 
+            ('dil_conv_5x5', 0)], 
+            reduce_concat=range(2, 6))
 
 # Table of default architecture by standardized data set name
 GENOTYPE_TBL = {
