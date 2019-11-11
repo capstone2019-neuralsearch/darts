@@ -100,7 +100,10 @@ def load_dataset(args, train=True):
 
     elif dset_name in VALID_DSET_NAMES['GalaxyZoo']:
         # parent path for the galaxy zoo dataset
-        data_path = os.path.join(args.data, 'galaxy_zoo')
+        if args.folder_name is not None:
+            data_path = os.path.join(args.data, args.folder_name)
+        else:
+            data_path = os.path.join(args.data, 'galaxy_zoo')
         # train and test transforms for this data set; choose applicable transform
         train_transform, valid_transform = utils._data_transforms_galaxy_zoo(args)
         transform = train_transform if train else valid_transform

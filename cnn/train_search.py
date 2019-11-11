@@ -25,6 +25,7 @@ parser = argparse.ArgumentParser("darts")
 # NON-PERFORMANCE RELATED
 parser.add_argument('--dataset', type=str, default='cifar', help='name of the dataset to use (e.g. cifar, mnist, graphene)')
 parser.add_argument('--data', type=str, default='../data', help='location of the data corpus')
+parser.add_argument('--folder_name', type=str, default=None, help='Name of top-level folder containing the data, e.g. galaxy_zoo')
 parser.add_argument('--report_freq', type=float, default=50, help='report frequency')
 parser.add_argument('--gpu', type=int, default=0, help='gpu device id')
 parser.add_argument('--model_path', type=str, default='saved_models', help='path to save the model')
