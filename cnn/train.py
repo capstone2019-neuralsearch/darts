@@ -35,11 +35,9 @@ parser.add_argument('--random', action="store_true", default=False, help='train 
 # PERFORMANCE RELATED
 
 ## HIGHLY IMPORTANT (TUNE THESE)
-parser.add_argument('--learning_rate', type=float, default=1e-3, help='init learning rate')
-parser.add_argument('--weight_decay', type=float, default=3e-4, help='weight decay')
 parser.add_argument('--init_channels', type=int, default=36, help='num of init channels')
 parser.add_argument('--layers', type=int, default=20, help='total number of layers')
-parser.add_argument('--drop_path_prob', type=float, default=0.2, help='drop path probability') # this is dropout
+parser.add_argument('--learning_rate', type=float, default=1e-3, help='init learning rate')
 parser.add_argument('--arch', type=str, default='DATASET',
                     help='which architecture to use; default is lookup by dataset name')
 
@@ -48,6 +46,8 @@ parser.add_argument('--epochs', type=int, default=100, help='num of training epo
 parser.add_argument('--batch_size', type=int, default=64, help='batch size')
 parser.add_argument('--optimizer', type=str, default='Adam', help='optimizer; one of SGD or Adam')
 parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
+parser.add_argument('--drop_path_prob', type=float, default=0.2, help='drop path probability') # this is dropout
+parser.add_argument('--weight_decay', type=float, default=3e-4, help='weight decay')
 parser.add_argument('--fc1_size', type=int, default=1024, help='number of units in fully connected layer 1')
 parser.add_argument('--fc2_size', type=int, default=1024, help='number of units in fully connected layer 2')
 

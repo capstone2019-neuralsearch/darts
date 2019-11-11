@@ -30,13 +30,14 @@ primitives_Default = [
 # Primitives for Galaxy Zoo data set
 primitives_GalaxyZoo = [
     'none',
-    'skip_connect',
     'max_pool_2x2',
-    # 'avg_pool_2x2',
+    'avg_pool_2x2',
     'max_pool_3x3',
     'avg_pool_3x3',
+    'skip_connect',
     'sep_conv_3x3',
     'sep_conv_5x5',
+    'sep_conv_7x7',
     'dil_conv_3x3',
     'dil_conv_5x5'
 ]
@@ -79,7 +80,7 @@ NASNet = Genotype(
   ],
   reduce_concat = [4, 5, 6],
 )
-    
+
 AmoebaNet = Genotype(
   normal = [
     ('avg_pool_3x3', 0),
@@ -124,92 +125,92 @@ CIFAR_10 = DARTS_V2
 # Best architecture for mnist
 MNIST = Genotype(
 	normal=[
-	('max_pool_3x3', 0), 
-	('skip_connect', 1), 
-	('max_pool_3x3', 0), 
-	('sep_conv_3x3', 2), 
-	('sep_conv_3x3', 3), 
-	('sep_conv_3x3', 2), 
-	('sep_conv_5x5', 4), 
-	('sep_conv_3x3', 3)], 
-	normal_concat=range(2, 6), 
+	('max_pool_3x3', 0),
+	('skip_connect', 1),
+	('max_pool_3x3', 0),
+	('sep_conv_3x3', 2),
+	('sep_conv_3x3', 3),
+	('sep_conv_3x3', 2),
+	('sep_conv_5x5', 4),
+	('sep_conv_3x3', 3)],
+	normal_concat=range(2, 6),
 	reduce=[
-	('avg_pool_3x3', 0), 
-	('avg_pool_3x3', 1), 
-	('avg_pool_3x3', 0), 
-	('avg_pool_3x3', 1), 
-	('avg_pool_3x3', 0), 
-	('dil_conv_5x5', 3), 
-	('avg_pool_3x3', 0), 
-	('dil_conv_5x5', 4)], 
+	('avg_pool_3x3', 0),
+	('avg_pool_3x3', 1),
+	('avg_pool_3x3', 0),
+	('avg_pool_3x3', 1),
+	('avg_pool_3x3', 0),
+	('dil_conv_5x5', 3),
+	('avg_pool_3x3', 0),
+	('dil_conv_5x5', 4)],
 	reduce_concat=range(2, 6))
-	
+
 # Best architecture for fashion-mnist
 FASHION_MNIST = Genotype(
 	normal=[
-	('skip_connect', 0), 
-	('sep_conv_5x5', 1), 
-	('dil_conv_5x5', 1), 
-	('skip_connect', 0), 
-	('sep_conv_5x5', 3), 
-	('sep_conv_3x3', 0), 
-	('sep_conv_3x3', 4), 
-	('sep_conv_5x5', 1)], 
-	normal_concat=range(2, 6), 
+	('skip_connect', 0),
+	('sep_conv_5x5', 1),
+	('dil_conv_5x5', 1),
+	('skip_connect', 0),
+	('sep_conv_5x5', 3),
+	('sep_conv_3x3', 0),
+	('sep_conv_3x3', 4),
+	('sep_conv_5x5', 1)],
+	normal_concat=range(2, 6),
 	reduce=[
-	('avg_pool_3x3', 0), 
-	('dil_conv_3x3', 1), 
-	('avg_pool_3x3', 0), 
-	('skip_connect', 2), 
-	('avg_pool_3x3', 0), 
-	('dil_conv_5x5', 2), 
-	('avg_pool_3x3', 0), 
-	('skip_connect', 2)], 
+	('avg_pool_3x3', 0),
+	('dil_conv_3x3', 1),
+	('avg_pool_3x3', 0),
+	('skip_connect', 2),
+	('avg_pool_3x3', 0),
+	('dil_conv_5x5', 2),
+	('avg_pool_3x3', 0),
+	('skip_connect', 2)],
 	reduce_concat=range(2, 6))
 
 # Best architecture for graphene
 GRAPHENE = Genotype(
 	normal=[
-	('avg_pool_3x3', 1), 
-	('skip_connect', 0), 
-	('avg_pool_3x3', 2), 
-	('skip_connect', 1), 
-	('avg_pool_3x3', 3), 
-	('avg_pool_3x3', 2), 
-	('avg_pool_3x3', 3), 
-	('skip_connect', 4)], 
-	normal_concat=range(2, 6), 
+	('avg_pool_3x3', 1),
+	('skip_connect', 0),
+	('avg_pool_3x3', 2),
+	('skip_connect', 1),
+	('avg_pool_3x3', 3),
+	('avg_pool_3x3', 2),
+	('avg_pool_3x3', 3),
+	('skip_connect', 4)],
+	normal_concat=range(2, 6),
 	reduce=[
-	('skip_connect', 0), 
-	('skip_connect', 1), 
-	('sep_conv_5x5', 2), 
-	('sep_conv_3x3', 0), 
-	('avg_pool_3x3', 3), 
-	('avg_pool_3x3', 2), 
-	('sep_conv_5x5', 4), 
-	('sep_conv_3x3', 2)], 
+	('skip_connect', 0),
+	('skip_connect', 1),
+	('sep_conv_5x5', 2),
+	('sep_conv_3x3', 0),
+	('avg_pool_3x3', 3),
+	('avg_pool_3x3', 2),
+	('sep_conv_5x5', 4),
+	('sep_conv_3x3', 2)],
 	reduce_concat=range(2, 6))
-    
+
 # Best discovered architecture for GalaxyZoo 2019-11-05
 # 2019-11-05 09:18:10,861 validation loss; R2: 8.993143e-03 -0.243955
 GALAXY_ZOO = Genotype(
-    normal=[('dil_conv_3x3', 0), 
-            ('dil_conv_5x5', 1), 
-            ('dil_conv_5x5', 2), 
-            ('max_pool_2x2', 0), 
-            ('dil_conv_5x5', 0), 
-            ('sep_conv_5x5', 2), 
-            ('sep_conv_5x5', 4), 
-            ('max_pool_3x3', 1)], 
-            normal_concat=range(2, 6), 
-    reduce=[('max_pool_3x3', 0), 
-            ('max_pool_3x3', 1), 
-            ('max_pool_3x3', 0), 
-            ('dil_conv_5x5', 2), 
-            ('dil_conv_5x5', 2), 
-            ('dil_conv_5x5', 3), 
-            ('dil_conv_5x5', 4), 
-            ('dil_conv_5x5', 0)], 
+    normal=[('dil_conv_3x3', 0),
+            ('dil_conv_5x5', 1),
+            ('dil_conv_5x5', 2),
+            ('max_pool_2x2', 0),
+            ('dil_conv_5x5', 0),
+            ('sep_conv_5x5', 2),
+            ('sep_conv_5x5', 4),
+            ('max_pool_3x3', 1)],
+            normal_concat=range(2, 6),
+    reduce=[('max_pool_3x3', 0),
+            ('max_pool_3x3', 1),
+            ('max_pool_3x3', 0),
+            ('dil_conv_5x5', 2),
+            ('dil_conv_5x5', 2),
+            ('dil_conv_5x5', 3),
+            ('dil_conv_5x5', 4),
+            ('dil_conv_5x5', 0)],
             reduce_concat=range(2, 6))
 
 # Table of default architecture by standardized data set name
