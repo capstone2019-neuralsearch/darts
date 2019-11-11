@@ -25,7 +25,7 @@ parser.add_argument('--dataset', type=str, default='cifar', help='name of the da
 parser.add_argument('--data', type=str, default='../data', help='location of the data corpus')
 parser.add_argument('--batch_size', type=int, default=64, help='batch size')
 parser.add_argument('--optimizer', type=str, default='Adam', help='optimizer; one of SGD or Adam')
-parser.add_argument('--primitives', type=str, default='Default', 
+parser.add_argument('--primitives', type=str, default='Default',
                     help='set of primitive operations for arch search; defined in genotypes.py')
 parser.add_argument('--learning_rate', type=float, default=0.001, help='init learning rate')
 parser.add_argument('--learning_rate_min', type=float, default=0.0001, help='min learning rate')
@@ -49,7 +49,7 @@ parser.add_argument('--arch_learning_rate', type=float, default=1.0e-3, help='le
 parser.add_argument('--arch_weight_decay', type=float, default=1.0e-6, help='weight decay for arch encoding')
 parser.add_argument('--fc1_size', type=int, default=1024, help='number of units in fully connected layer 1')
 parser.add_argument('--fc2_size', type=int, default=1024, help='number of units in fully connected layer 2')
-parser.add_argument('--gz_regression', action='store_true', default=False, 
+parser.add_argument('--gz_regression', action='store_true', default=False,
                     help='run GalaxyZoo as a standard regression (default True follows custom GZ decision tree)')
 args = parser.parse_args()
 
@@ -66,7 +66,7 @@ logging.getLogger().addHandler(fh)
 # Get normalized dataset name
 dataset = DSET_NAME_TBL[args.dataset.lower().strip()]
 
-   
+
 # If the default set of primitives is requested, use the normalized name of the dataset
 primitives_name = dataset if args.primitives == 'Default' else args.primitives
 
@@ -106,12 +106,12 @@ def main():
   # In the special case that the dataset is GalaxyZoo, overwrite Network with GalaxyZooNetwork
   # unless the user specified gz_regression
   if (dataset == 'GalaxyZoo') and not args.gz_regression:
-    model = Network(C=args.init_channels, num_classes=OUTPUT_DIM, primitives_name=primitives_name, 
+    model = Network(C=args.init_channels, num_classes=OUTPUT_DIM, primitives_name=primitives_name,
                     layers=args.layers, criterion=criterion, num_channels=IN_CHANNELS)
   else:
-    model = NetworkGalaxyZoo(C=args.init_channels, num_classes=OUTPUT_DIM, primitives_name=primitives_name, 
-                             layers=args.layers, criterion=criterion, 
-                             fc1_size=fc1_size, fc2_size=fc2_size,
+    model = NetworkGalaxyZoo(C=args.init_channels, num_classes=OUTPUT_DIM, primitives_name=primitives_name,
+                             layers=args.layers, criterion=criterion,
+                             fc1_size=args.fc1_size, fc2_size=args.fc2_size,
                              num_channels=IN_CHANNELS)
   model = model.cuda()
   logging.info("param size = %fMB", utils.count_parameters_in_MB(model))
@@ -136,7 +136,7 @@ def main():
         optimizer, float(args.epochs), eta_min=args.learning_rate_min)
 
   architect = Architect(model, args)
-  
+
   # history of training and validation loss; 2 columns for loss and accuracy / R2
   hist_trn = np.zeros((args.epochs, 2))
   hist_val = np.zeros((args.epochs, 2))
@@ -171,10 +171,10 @@ def main():
     # save history to numpy arrays
     hist_val[epoch] = [valid_acc, valid_obj]
     np.save(os.path.join(args.save, 'hist_val'), hist_val)
-    
+
     # save weights
     utils.save(model, os.path.join(args.save, 'weights.pt'))
-    
+
     # save loss history
 
 
