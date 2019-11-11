@@ -151,7 +151,7 @@ def load_dataset(args, train=True):
                 train_transform, valid_transform = utils._data_transforms_galaxy_zoo(args)
                 transform = train_transform if train else valid_transform
 
-            data = TensorDataset(
+            data = torchsample.TensorDataset(
                 torch.from_numpy(X), torch.from_numpy(y),
                 input_transform = transform
             )
