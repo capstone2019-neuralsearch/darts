@@ -34,10 +34,12 @@ parser.add_argument('--random', action="store_true", default=False, help='train 
 
 # PERFORMANCE RELATED
 
-## HIGHLY IMPORTANT (TUNE THESE)
+## HIGHLY IMPORTANT
 parser.add_argument('--init_channels', type=int, default=36, help='num of init channels')
 parser.add_argument('--layers', type=int, default=20, help='total number of layers')
 parser.add_argument('--learning_rate', type=float, default=1e-3, help='init learning rate')
+parser.add_argument('--drop_path_prob', type=float, default=0.2, help='drop path probability') # this is dropout
+parser.add_argument('--weight_decay', type=float, default=3e-4, help='weight decay')
 parser.add_argument('--arch', type=str, default='DATASET',
                     help='which architecture to use; default is lookup by dataset name')
 
@@ -46,10 +48,10 @@ parser.add_argument('--epochs', type=int, default=100, help='num of training epo
 parser.add_argument('--batch_size', type=int, default=64, help='batch size')
 parser.add_argument('--optimizer', type=str, default='Adam', help='optimizer; one of SGD or Adam')
 parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
-parser.add_argument('--drop_path_prob', type=float, default=0.2, help='drop path probability') # this is dropout
-parser.add_argument('--weight_decay', type=float, default=3e-4, help='weight decay')
 parser.add_argument('--fc1_size', type=int, default=1024, help='number of units in fully connected layer 1')
 parser.add_argument('--fc2_size', type=int, default=1024, help='number of units in fully connected layer 2')
+parser.add_argument('--gz_regression', action='store_true', default=True,
+                    help='run GalaxyZoo as a standard regression (default True: use simple regression method)')
 
 ## LESS IMPORTANT
 parser.add_argument('--val_portion', type=float, default=0.1, help='portion of validation data')
@@ -96,9 +98,6 @@ def main():
   logging.info("args = %s", args)
 
   train_data, OUTPUT_DIM, IN_CHANNELS, is_regression = load_dataset(args, train=True)
-
-  # train_data, OUTPUT_DIM, IN_CHANNELS, is_regression = load_dataset(args, train=True)
-  # valid_data, _, _, _ = load_dataset(args, train=False)
 
   criterion = nn.CrossEntropyLoss() if not is_regression else nn.MSELoss()
 
@@ -147,14 +146,7 @@ def main():
   else:
     raise ValueError(f"Bad optimizer; got {args.optimizer}, must be one of 'SGD' or 'Adam'.")
 
-  # train_queue = torch.utils.data.DataLoader(
-      # train_data, batch_size=batch_size, shuffle=True, pin_memory=True, num_workers=2)
-
-  # valid_queue = torch.utils.data.DataLoader(
-      # valid_data, batch_size=batch_size, shuffle=False, pin_memory=True, num_workers=2)
-
   # Split training data into training and validation queues
-  # Can't use test set for validation on GalaxyZoo because test labels unavailable (can only upload to Kaggle)
   num_train = len(train_data)
   indices = list(range(num_train))
   train_portion = 1.0 - args.val_portion
