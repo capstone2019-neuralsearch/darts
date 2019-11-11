@@ -42,7 +42,7 @@ parser.add_argument('--cutout_length', type=int, default=16, help='cutout length
 parser.add_argument('--drop_path_prob', type=float, default=0.2, help='drop path probability')
 parser.add_argument('--save', type=str, default='EXP', help='experiment name')
 parser.add_argument('--seed', type=int, default=0, help='random seed')
-parser.add_argument('--arch', type=str, default='DATASET', 
+parser.add_argument('--arch', type=str, default='DATASET',
                     help='which architecture to use; default is lookup by dataset name')
 parser.add_argument('--fc1_size', type=int, default=1024, help='number of units in fully connected layer 1')
 parser.add_argument('--fc2_size', type=int, default=1024, help='number of units in fully connected layer 2')
@@ -77,7 +77,7 @@ def main():
   if not args.random:
     # We would always get the same random architecture if we set the random
     # seed here. We'll set it after finding a random genotype.
-    torch.manual_seed(args.seed) 
+    torch.manual_seed(args.seed)
 
   cudnn.enabled=True
   torch.cuda.manual_seed(args.seed)
@@ -93,7 +93,7 @@ def main():
 
   if args.random:
     model_tmp = Network(args.init_channels, OUTPUT_DIM, args.layers, criterion, num_channels=IN_CHANNELS)
-    genotype = model_tmp.genotype()  # Random  
+    genotype = model_tmp.genotype()  # Random
 
     # We can now set the random seed.
     torch.manual_seed(args.seed)
@@ -102,15 +102,15 @@ def main():
     genotype = GENOTYPE_TBL[dataset]
     print(f'using genotype for {dataset}')
   else:
-    try:  
+    try:
       genotype = eval("genotypes.%s" % args.arch)
     except (AttributeError, SyntaxError):
       genotype = genotypes.load_genotype_from_file(args.arch)
 
   genotypes.save_genotype_to_file(genotype, os.path.join(args.save, "genotype.arch"))
   # Set the inference network; default is NetworkCifar10; supported alternatives NetworkGalaxyZoo
-  if dataset == 'GalaxyZoo':
-    model = NetworkGalaxyZoo(C=args.init_channels, num_classes=OUTPUT_DIM, layers=args.layers, genotype=genotype, 
+  if dataset == 'GalaxyZoo' and not args.gz_regression:
+    model = NetworkGalaxyZoo(C=args.init_channels, num_classes=OUTPUT_DIM, layers=args.layers, genotype=genotype,
                              fc1_size=args.fc1_size, fc2_size=args.fc2_size, num_channels=IN_CHANNELS)
   else:
     model = NetworkCIFAR(args.init_channels, OUTPUT_DIM, args.layers, args.auxiliary, genotype, num_channels=IN_CHANNELS)

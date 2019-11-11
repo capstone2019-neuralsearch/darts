@@ -104,7 +104,7 @@ def main():
   criterion = criterion.cuda()
 
   # Special network for Galaxy Zoo regression
-  if dataset == 'GalaxyZoo' and args.gz_regression:
+  if dataset == 'GalaxyZoo' and not args.gz_regression:
       model = NetworkGalaxyZoo(C=args.init_channels, num_classes=OUTPUT_DIM, primitives_name=primitives_name,
                              layers=args.layers, criterion=criterion,
                              fc1_size=args.fc1_size, fc2_size=args.fc2_size,
@@ -112,7 +112,7 @@ def main():
   else:
       model = Network(C=args.init_channels, num_classes=OUTPUT_DIM, primitives_name=primitives_name,
                       layers=args.layers, criterion=criterion, num_channels=IN_CHANNELS)
-                      
+
   model = model.cuda()
   logging.info("param size = %fMB", utils.count_parameters_in_MB(model))
 
