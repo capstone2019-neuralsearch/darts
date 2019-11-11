@@ -27,10 +27,10 @@ parser.add_argument('--batch_size', type=int, default=64, help='batch size')
 parser.add_argument('--optimizer', type=str, default='Adam', help='optimizer; one of SGD or Adam')
 parser.add_argument('--primitives', type=str, default='Default',
                     help='set of primitive operations for arch search; defined in genotypes.py')
-parser.add_argument('--learning_rate', type=float, default=0.001, help='init learning rate')
-parser.add_argument('--learning_rate_min', type=float, default=0.0001, help='min learning rate')
+parser.add_argument('--learning_rate', type=float, default=1e-3, help='init learning rate')
+parser.add_argument('--learning_rate_min', type=float, default=1e-4, help='min learning rate')
 parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
-parser.add_argument('--weight_decay', type=float, default=1.0E-6, help='weight decay')
+parser.add_argument('--weight_decay', type=float, default=1e-6, help='weight decay')
 parser.add_argument('--report_freq', type=float, default=50, help='report frequency')
 parser.add_argument('--gpu', type=int, default=0, help='gpu device id')
 parser.add_argument('--epochs', type=int, default=50, help='num of training epochs')
@@ -39,18 +39,21 @@ parser.add_argument('--layers', type=int, default=8, help='total number of layer
 parser.add_argument('--model_path', type=str, default='saved_models', help='path to save the model')
 parser.add_argument('--cutout', action='store_true', default=False, help='use cutout')
 parser.add_argument('--cutout_length', type=int, default=16, help='cutout length')
-parser.add_argument('--drop_path_prob', type=float, default=0.3, help='drop path probability')
+# the below arg is not used anywhere in this script, nor is it used in any of the loaded modules
+# parser.add_argument('--drop_path_prob', type=float, default=0.3, help='drop path probability')
 parser.add_argument('--save', type=str, default='EXP', help='experiment name')
 parser.add_argument('--seed', type=int, default=2, help='random seed')
 parser.add_argument('--grad_clip', type=float, default=5, help='gradient clipping')
 parser.add_argument('--train_portion', type=float, default=0.5, help='portion of training data')
 parser.add_argument('--unrolled', action='store_true', default=True, help='use one-step unrolled validation loss')
-parser.add_argument('--arch_learning_rate', type=float, default=1.0e-3, help='learning rate for arch encoding')
-parser.add_argument('--arch_weight_decay', type=float, default=1.0e-6, help='weight decay for arch encoding')
+parser.add_argument('--arch_learning_rate', type=float, default=1e-3, help='learning rate for arch encoding')
+parser.add_argument('--arch_weight_decay', type=float, default=1e-6, help='weight decay for arch encoding')
 parser.add_argument('--fc1_size', type=int, default=1024, help='number of units in fully connected layer 1')
 parser.add_argument('--fc2_size', type=int, default=1024, help='number of units in fully connected layer 2')
 parser.add_argument('--gz_regression', action='store_true', default=False,
-                    help='run GalaxyZoo as a standard regression (default True follows custom GZ decision tree)')
+                    help='run GalaxyZoo as a standard regression (default False: use custom GZ decision tree)')
+parser.add_argument('--cell_steps', type=int, default=4, help='number of steps in a cell (see model_search.Network)')
+parser.add_argument('--cell_multiplier', type=int, default=4, help='multiplier for a cell (see model_search.Network)')
 args = parser.parse_args()
 
 args.save = 'search-{}-{}'.format(args.save, time.strftime("%Y%m%d-%H%M%S"))
@@ -108,10 +111,12 @@ def main():
       model = NetworkGalaxyZoo(C=args.init_channels, num_classes=OUTPUT_DIM, primitives_name=primitives_name,
                              layers=args.layers, criterion=criterion,
                              fc1_size=args.fc1_size, fc2_size=args.fc2_size,
-                             num_channels=IN_CHANNELS)
+                             num_channels=IN_CHANNELS, steps=args.cell_steps,
+                             multiplier=args.cell_multiplier)
   else:
       model = Network(C=args.init_channels, num_classes=OUTPUT_DIM, primitives_name=primitives_name,
-                      layers=args.layers, criterion=criterion, num_channels=IN_CHANNELS)
+                      layers=args.layers, criterion=criterion, num_channels=IN_CHANNELS,
+                      steps=args.cell_steps, multiplier=args.cell_multiplier)
 
   model = model.cuda()
   logging.info("param size = %fMB", utils.count_parameters_in_MB(model))

@@ -91,7 +91,7 @@ class Network(nn.Module):
         reduction = True
       else:
         reduction = False
-      cell = Cell(primitives_name=primitives_name, steps=steps, multiplier=multiplier, 
+      cell = Cell(primitives_name=primitives_name, steps=steps, multiplier=multiplier,
                   C_prev_prev=C_prev_prev, C_prev=C_prev, C=C_curr, reduction=reduction, reduction_prev=reduction_prev)
       reduction_prev = reduction
       self.cells += [cell]
@@ -174,7 +174,7 @@ class Network(nn.Module):
 class NetworkGalaxyZoo(Network):
   """Subclass of Network specialized for the GalaxyZoo problem"""
 
-  def __init__(self, primitives_name: str, C, num_classes, layers, criterion, 
+  def __init__(self, primitives_name: str, C, num_classes, layers, criterion,
                fc1_size: int, fc2_size: int, num_channels=3, steps=4, multiplier=4, stem_multiplier=3):
     # super(Network, self).__init__()
     # Network.__init__(self, C=C, num_classes=num_classes, layers=layers, primitives_name=primitives_name,
@@ -206,14 +206,14 @@ class NetworkGalaxyZoo(Network):
         reduction = True
       else:
         reduction = False
-      cell = Cell(primitives_name=primitives_name, steps=steps, multiplier=multiplier, 
+      cell = Cell(primitives_name=primitives_name, steps=steps, multiplier=multiplier,
                   C_prev_prev=C_prev_prev, C_prev=C_prev, C=C_curr, reduction=reduction, reduction_prev=reduction_prev)
       reduction_prev = reduction
       self.cells += [cell]
       C_prev_prev, C_prev = C_prev, multiplier*C_curr
 
     self.global_pooling = nn.AdaptiveAvgPool2d(1)
-    
+
     # Fully connected layers
     self.fc1 = nn.Linear(C_prev, fc1_size)
     self.fc2 = nn.Linear(fc1_size, fc2_size)
@@ -266,7 +266,7 @@ class NetworkGalaxyZoo(Network):
   def forward(self, input):
     """
     Specialized forward pass for GalaxyZoo; hybrid of classification and regression.
-    The first part of the forward pass is the same as 
+    The first part of the forward pass is the same as
     """
     s0 = s1 = self.stem(input)
     for i, cell in enumerate(self.cells):
@@ -276,7 +276,7 @@ class NetworkGalaxyZoo(Network):
         weights = F.softmax(self.alphas_normal, dim=-1)
       s0, s1 = s1, cell(s0, s1, weights)
     out = self.global_pooling(s1)
-    
+
     # Fully connected layers
     conv_out = out.view(out.size(0),-1)
     fc1_out = self.fc1(conv_out)
@@ -344,6 +344,6 @@ class NetworkGalaxyZoo(Network):
     probs_q11 = C4_1 * F.softmax(logits_q11, dim=-1)
 
     # Concatenate probabilities into vector of length 37
-    probs = torch.cat([probs_q1, probs_q2, probs_q3, probs_q4, probs_q5, probs_q6, 
+    probs = torch.cat([probs_q1, probs_q2, probs_q3, probs_q4, probs_q5, probs_q6,
                        probs_q7, probs_q8, probs_q9, probs_q10, probs_q11], dim=-1)
     return probs
