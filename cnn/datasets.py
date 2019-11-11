@@ -121,9 +121,14 @@ def load_dataset(args, train=True):
                 data = DatasetGalaxyZoo(train_img_dir, train_csv_file, transform=transform)
             else:
                 data = DatasetGalaxyZoo(test_img_dir, test_csv_file, transform=transform)
+
         else:
             if train:
-                ds = xr.open_dataset(os.path.join(args.data, args.folder_name, 'galaxy_train.nc'))
+                if args.folder_name is not None:
+                    ds = xr.open_dataset(os.path.join(args.data, args.folder_name, 'galaxy_train.nc'))
+                else:
+                    ds = xr.open_dataset(os.path.join(args.data, 'galaxy_train.nc'))
+
                 X = ds['image_train'].transpose('sample', 'channel', 'x' ,'y').data  # pytorch use channel-first, unlike Keras
                 y = ds['label_train'].data
             else:
@@ -136,7 +141,7 @@ def load_dataset(args, train=True):
                 torchsample.transforms.RandomFlip()
             ])
 
-            data = torchsample.TensorDataset(
+            data = TensorDataset(
                 torch.from_numpy(X), torch.from_numpy(y),
                 input_transform = transform
             )
