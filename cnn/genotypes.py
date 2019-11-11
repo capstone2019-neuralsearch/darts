@@ -15,7 +15,8 @@ def load_genotype_from_file(filename):
     return eval(f.readline().strip())
 
 
-PRIMITIVES = [
+# Default set of primitives
+primitives_Default = [
     'none',
     'max_pool_3x3',
     'avg_pool_3x3',
@@ -25,6 +26,30 @@ PRIMITIVES = [
     'dil_conv_3x3',
     'dil_conv_5x5'
 ]
+
+# Primitives for Galaxy Zoo data set
+primitives_GalaxyZoo = [
+    'none',
+    'skip_connect',
+    'max_pool_2x2',
+    # 'avg_pool_2x2',
+    'max_pool_3x3',
+    'avg_pool_3x3',
+    'sep_conv_3x3',
+    'sep_conv_5x5',
+    'dil_conv_3x3',
+    'dil_conv_5x5'
+]
+
+# Dictionary of primitive sets
+PRIMITIVES_TBL = {
+    'Default': primitives_Default,
+    'CIFAR': primitives_Default,
+    'MNIST': primitives_Default,
+    'FashionMNIST': primitives_Default,
+    'GrapheneKirigami': primitives_Default,
+    'GalaxyZoo': primitives_GalaxyZoo
+}
 
 NASNet = Genotype(
   normal = [
@@ -164,3 +189,34 @@ GRAPHENE = Genotype(
 	('sep_conv_5x5', 4), 
 	('sep_conv_3x3', 2)], 
 	reduce_concat=range(2, 6))
+    
+# Best discovered architecture for GalaxyZoo 2019-11-05
+# 2019-11-05 09:18:10,861 validation loss; R2: 8.993143e-03 -0.243955
+GALAXY_ZOO = Genotype(
+    normal=[('dil_conv_3x3', 0), 
+            ('dil_conv_5x5', 1), 
+            ('dil_conv_5x5', 2), 
+            ('max_pool_2x2', 0), 
+            ('dil_conv_5x5', 0), 
+            ('sep_conv_5x5', 2), 
+            ('sep_conv_5x5', 4), 
+            ('max_pool_3x3', 1)], 
+            normal_concat=range(2, 6), 
+    reduce=[('max_pool_3x3', 0), 
+            ('max_pool_3x3', 1), 
+            ('max_pool_3x3', 0), 
+            ('dil_conv_5x5', 2), 
+            ('dil_conv_5x5', 2), 
+            ('dil_conv_5x5', 3), 
+            ('dil_conv_5x5', 4), 
+            ('dil_conv_5x5', 0)], 
+            reduce_concat=range(2, 6))
+
+# Table of default architecture by standardized data set name
+GENOTYPE_TBL = {
+    'CIFAR': CIFAR_10,
+    'MNIST': MNIST,
+    'FashionMNIST': FASHION_MNIST,
+    'GrapheneKirigami': GRAPHENE,
+    'GalaxyZoo': GALAXY_ZOO,
+}

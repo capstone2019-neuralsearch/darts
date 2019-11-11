@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from operations import *
 from torch.autograd import Variable
 from utils import drop_path
@@ -9,7 +10,6 @@ class Cell(nn.Module):
 
   def __init__(self, genotype, C_prev_prev, C_prev, C, reduction, reduction_prev):
     super(Cell, self).__init__()
-    print(C_prev_prev, C_prev, C)
 
     if reduction_prev:
       self.preprocess0 = FactorizedReduce(C_prev_prev, C)
@@ -213,3 +213,172 @@ class NetworkImageNet(nn.Module):
     out = self.global_pooling(s1)
     logits = self.classifier(out.view(out.size(0), -1))
     return logits, logits_aux
+
+
+class Maxout(nn.Module):
+
+    def __init__(self, d_in, d_out, pool_size):
+        super().__init__()
+        self.d_in, self.d_out, self.pool_size = d_in, d_out, pool_size
+        self.lin = nn.Linear(d_in, d_out * pool_size)
+
+
+    def forward(self, inputs):
+        shape = list(inputs.size())
+        shape[-1] = self.d_out
+        shape.append(self.pool_size)
+        max_dim = len(shape) - 1
+        out = self.lin(inputs)
+        m, i = out.view(*shape).max(max_dim)
+        return m
+        
+class NetworkGalaxyZoo(nn.Module):
+
+  def __init__(self, C, num_classes, layers, genotype, fc1_size: int, fc2_size: int, num_channels=3):
+    super(NetworkGalaxyZoo, self).__init__()
+    self._layers = layers
+    self._num_channels = num_channels
+
+    stem_multiplier = 3
+    C_curr = stem_multiplier*C
+    self.stem = nn.Sequential(
+      nn.Conv2d(self._num_channels, C_curr, 3, padding=1, bias=False),
+      nn.BatchNorm2d(C_curr)
+    )
+
+    C_prev_prev, C_prev, C_curr = C_curr, C_curr, C
+    self.cells = nn.ModuleList()
+    reduction_prev = False
+    for i in range(layers):
+      if i in [layers//3, 2*layers//3]:
+        C_curr *= 2
+        reduction = True
+      else:
+        reduction = False
+      cell = Cell(genotype, C_prev_prev, C_prev, C_curr, reduction, reduction_prev)
+      reduction_prev = reduction
+      self.cells += [cell]
+      C_prev_prev, C_prev = C_prev, cell.multiplier*C_curr
+
+    self.global_pooling = nn.AdaptiveAvgPool2d(1)
+
+    # Fully connected layers
+    self.num_fc_layers = 2 if fc2_size > 0 else 1
+    self.fc1 = nn.Linear(C_prev, fc1_size)
+    # self.fc1 = Maxout(C_prev, fc1_size, 2)
+    if self.num_fc_layers >= 2:
+        self.fc2 = nn.Linear(fc1_size, fc2_size)
+        # self.fc2 = Maxout(fc1_size, fc2_size, 2)
+    fc_last_size = fc2_size if self.num_fc_layers == 2 else fc1_size
+
+    # Galaxy Zoo question 1: smooth galaxy; galaxy with features or disk; elliptic
+    self.classifier_q1 = nn.Linear(fc_last_size, 3)
+
+    # Galaxy Zoo question 2: Is it edge on?
+    self.classifier_q2 = nn.Linear(fc_last_size, 2)
+
+    # Galaxy Zoo question 3: Is there a bar?
+    self.classifier_q3 = nn.Linear(fc_last_size, 2)
+
+    # Galaxy Zoo question 4: Is there a spiral pattern?
+    self.classifier_q4 = nn.Linear(fc_last_size, 2)
+
+    # Galaxy Zoo question 5: How prominent is the central bulge?
+    self.classifier_q5 = nn.Linear(fc_last_size, 4)
+
+    # Galaxy Zoo question 6: Is there anything odd?
+    self.classifier_q6 = nn.Linear(fc_last_size, 2)
+
+    # Galaxy Zoo question 7: How rounded is it?
+    self.classifier_q7 = nn.Linear(fc_last_size, 3)
+
+    # Galaxy Zoo question 8: What is the odd feature?
+    self.classifier_q8 = nn.Linear(fc_last_size, 7)
+
+    # Galaxy Zoo question 9: Is Does the galaxy have a bulge?
+    self.classifier_q9 = nn.Linear(fc_last_size, 3)
+
+    # Galaxy Zoo question 10: How tightly wound is it?
+    self.classifier_q10 = nn.Linear(fc_last_size, 3)
+
+    # Galaxy Zoo question 11: How many spiral arms?
+    self.classifier_q11 = nn.Linear(fc_last_size, 6)
+
+  def forward(self, input):
+    logits_aux = None
+    s0 = s1 = self.stem(input)
+    for i, cell in enumerate(self.cells):
+      s0, s1 = s1, cell(s0, s1, self.drop_path_prob)
+    out = self.global_pooling(s1)
+
+    # Fully connected layers
+    conv_out = out.view(out.size(0),-1)
+    fc1_out = self.fc1(conv_out)
+    if self.num_fc_layers >= 2:
+        fc2_out = self.fc2(fc1_out)
+        fc_out = fc2_out
+    else:
+        fc_out = fc1_out
+        
+    # Logits for classifiers on GalaxyZoo questions
+    logits_q1 = self.classifier_q1(fc_out)
+    logits_q2 = self.classifier_q2(fc_out)
+    logits_q3 = self.classifier_q3(fc_out)
+    logits_q4 = self.classifier_q4(fc_out)
+    logits_q5 = self.classifier_q5(fc_out)
+    logits_q6 = self.classifier_q6(fc_out)
+    logits_q7 = self.classifier_q7(fc_out)
+    logits_q8 = self.classifier_q8(fc_out)
+    logits_q9 = self.classifier_q9(fc_out)
+    logits_q10 = self.classifier_q10(fc_out)
+    logits_q11 = self.classifier_q11(fc_out)
+
+    # Classification probabilities for GalaxyZoo questions
+    # Each output is a product of (probability classification is relevant) x (conditional probabilities)
+    # A1 = C1
+    probs_q1 = F.softmax(logits_q1, dim=-1)
+    C1_1 = probs_q1[:,0:1]
+    C1_2 = probs_q1[:,1:2]
+
+    # A2 = C1.2 * C2
+    probs_q2 = C1_2 * F.softmax(logits_q2, dim=-1)
+    C2_1 = probs_q2[:,0:1]
+    C2_2 = probs_q2[:,1:2]
+
+    # A3 = C2.2 * C3
+    probs_q3 = C2_2 * F.softmax(logits_q3, dim=-1)
+
+    # A4 = C2.2 * C4
+    probs_q4 = C2_2 * F.softmax(logits_q4, dim=-1)
+    C4_1 = probs_q4[:,0:1]
+
+    # A5 = C2.2 * C5
+    probs_q5 = C2_2 * F.softmax(logits_q5, dim=-1)
+
+    # A6 = C6
+    probs_q6 = F.softmax(logits_q6, dim=-1)
+    C6_1 = probs_q1[:,0:1]
+
+    # A7 = C1.1 * C7
+    probs_q7 = C1_1 * F.softmax(logits_q7, dim=-1)
+
+    # A8 = C6.1 * C8
+    probs_q8 = C6_1 * F.softmax(logits_q8, dim=-1)
+
+    # A9 = C2.1 * C9
+    probs_q9 = C2_1 * F.softmax(logits_q9, dim=-1)
+
+    # A10 = C4.1 * C10
+    probs_q10 = C4_1 * F.softmax(logits_q10, dim=-1)
+
+    # A11 = C4.1 * C10
+    probs_q11 = C4_1 * F.softmax(logits_q11, dim=-1)
+
+    # Concatenate probabilities into vector of length 37
+    probs = torch.cat([probs_q1, probs_q2, probs_q3, probs_q4, probs_q5, probs_q6, 
+                       probs_q7, probs_q8, probs_q9, probs_q10, probs_q11], dim=-1)
+
+    # No auxiliary outputs for this model; include for API consistency
+    probs_aux = None
+    return probs, probs_aux
+

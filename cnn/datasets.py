@@ -20,6 +20,13 @@ VALID_DSET_NAMES = {
     'GalaxyZoo': ['galaxy-zoo', 'galaxyzoo']
 }
 
+# Table to normalize data set name; key = aliased name, value = canonical dataset name
+DSET_NAME_TBL = dict()
+for dset_name_norm, dset_alias_list in VALID_DSET_NAMES.items():
+    for dset_alias_name in dset_alias_list:
+        DSET_NAME_TBL[dset_alias_name] = dset_name_norm
+
+# AWS storage bucket
 BUCKET_NAME = 'capstone2019-google'
 
 # *****************************************************************************
@@ -100,14 +107,17 @@ def load_dataset(args, train=True):
         # the locations of the images and CSV label files for train and test
         train_img_dir = os.path.join(data_path, 'images_train')
         train_csv_file = os.path.join(data_path, 'labels_train/labels_train.csv')
+        # for test data, only images available; the labels are NOT ground truth, just a placeholder!
         test_img_dir = os.path.join(data_path, 'images_test')
-        test_csv_file = os.path.join(data_path, 'benchmark_solutions/central_pirxel_benchmark.csv')
+        test_csv_file = os.path.join(data_path, 'benchmark_solutions/central_pixel_benchmark.csv')
         # choose appropriate image directory and CSV file
-        img_dir = train_img_dir if train else test_img_dir
-        csv_file = train_csv_file if train else test_csv_file
+        csv_file = train_csv_file if train else val_csv_file
         # instantiate the Dataset
-        data = DatasetGalaxyZoo(train_img_dir, train_csv_file, transform=transform)
-        # TODO add logic to fill in 37 classifiers from 11 decision tree outputs
+        if train:
+            data = DatasetGalaxyZoo(train_img_dir, train_csv_file, transform=transform)
+        else:
+            data = DatasetGalaxyZoo(test_img_dir, test_csv_file, transform=transform)
+        # these parameters don't depend on train vs. validation
         output_dim = 37
         in_channels = 3
         is_regression = True
