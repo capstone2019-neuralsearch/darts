@@ -54,7 +54,7 @@ parser.add_argument('--gz_regression', action='store_true', default=True,
                     help='run GalaxyZoo as a standard regression (default True: use simple regression method)')
 
 ## LESS IMPORTANT
-parser.add_argument('--val_portion', type=float, default=0.1, help='portion of validation data')
+parser.add_argument('--train_portion', type=float, default=0.9, help='portion of validation data')
 parser.add_argument('--grad_clip', type=float, default=5, help='gradient clipping')
 parser.add_argument('--auxiliary', action='store_true', default=False, help='use auxiliary tower')
 parser.add_argument('--auxiliary_weight', type=float, default=0.4, help='weight for auxiliary loss')

@@ -99,27 +99,48 @@ def load_dataset(args, train=True):
         is_regression = True
 
     elif dset_name in VALID_DSET_NAMES['GalaxyZoo']:
-        # parent path for the galaxy zoo dataset
-        if args.folder_name is not None:
-            data_path = os.path.join(args.data, args.folder_name)
+        if not args.use_xarray:
+            # parent path for the galaxy zoo dataset
+            if args.folder_name is not None:
+                data_path = os.path.join(args.data, args.folder_name)
+            else:
+                data_path = os.path.join(args.data, 'galaxy_zoo')
+            # train and test transforms for this data set; choose applicable transform
+            train_transform, valid_transform = utils._data_transforms_galaxy_zoo(args)
+            transform = train_transform if train else valid_transform
+            # the locations of the images and CSV label files for train and test
+            train_img_dir = os.path.join(data_path, 'images_train')
+            train_csv_file = os.path.join(data_path, 'labels_train/labels_train.csv')
+            # for test data, only images available; the labels are NOT ground truth, just a placeholder!
+            test_img_dir = os.path.join(data_path, 'images_test')
+            test_csv_file = os.path.join(data_path, 'benchmark_solutions/central_pixel_benchmark.csv')
+            # choose appropriate image directory and CSV file
+            csv_file = train_csv_file if train else val_csv_file
+            # instantiate the Dataset
+            if train:
+                data = DatasetGalaxyZoo(train_img_dir, train_csv_file, transform=transform)
+            else:
+                data = DatasetGalaxyZoo(test_img_dir, test_csv_file, transform=transform)
         else:
-            data_path = os.path.join(args.data, 'galaxy_zoo')
-        # train and test transforms for this data set; choose applicable transform
-        train_transform, valid_transform = utils._data_transforms_galaxy_zoo(args)
-        transform = train_transform if train else valid_transform
-        # the locations of the images and CSV label files for train and test
-        train_img_dir = os.path.join(data_path, 'images_train')
-        train_csv_file = os.path.join(data_path, 'labels_train/labels_train.csv')
-        # for test data, only images available; the labels are NOT ground truth, just a placeholder!
-        test_img_dir = os.path.join(data_path, 'images_test')
-        test_csv_file = os.path.join(data_path, 'benchmark_solutions/central_pixel_benchmark.csv')
-        # choose appropriate image directory and CSV file
-        csv_file = train_csv_file if train else val_csv_file
-        # instantiate the Dataset
-        if train:
-            data = DatasetGalaxyZoo(train_img_dir, train_csv_file, transform=transform)
-        else:
-            data = DatasetGalaxyZoo(test_img_dir, test_csv_file, transform=transform)
+            if train:
+                ds = xr.open_dataset(os.path.join(args.data, args.folder_name, 'galaxy_train.nc'))
+                X = ds['image_train'].transpose('sample', 'channel', 'x' ,'y').data  # pytorch use channel-first, unlike Keras
+                y = ds['label_train'].data
+            else:
+                # ds = xr.open_dataset(os.path.join(args.data, args.folder_name, 'galaxy_test.nc'))
+                raise NotImplementedError('Test loading with xarray not implemented')
+
+            # tips from http://benanne.github.io/2014/04/05/galaxy-zoo.html
+            transform = torchsample.transforms.Compose([
+                torchsample.transforms.Rotate(90),
+                torchsample.transforms.RandomFlip()
+            ])
+
+            data = torchsample.TensorDataset(
+                torch.from_numpy(X), torch.from_numpy(y),
+                input_transform = transform
+            )
+
         # these parameters don't depend on train vs. validation
         output_dim = 37
         in_channels = 3
