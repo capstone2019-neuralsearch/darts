@@ -4,6 +4,7 @@ import os
 import utils
 import torch
 import torchvision.datasets as dset
+import torchvision.transforms as torch_transforms
 from torch.utils.data import TensorDataset, Dataset
 import numpy as np
 import xarray as xr
@@ -136,9 +137,9 @@ def load_dataset(args, train=True):
                 raise NotImplementedError('Test loading with xarray not implemented')
 
             # tips from http://benanne.github.io/2014/04/05/galaxy-zoo.html
-            transform = torchsample.transforms.Compose([
-                torchsample.transforms.Rotate(90),
-                torchsample.transforms.RandomFlip()
+            transform = torch_transforms.Compose([
+                torch_transforms.Rotate(90),
+                torch_transforms.RandomFlip()
             ])
 
             data = TensorDataset(
