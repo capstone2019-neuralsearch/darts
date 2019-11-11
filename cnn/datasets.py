@@ -4,7 +4,6 @@ import os
 import utils
 import torch
 import torchvision.datasets as dset
-import torchvision.transforms as torch_transforms
 from torch.utils.data import TensorDataset, Dataset
 import numpy as np
 import xarray as xr
@@ -12,6 +11,11 @@ from sklearn.model_selection import train_test_split
 import boto3
 
 from galaxy_zoo import DatasetGalaxyZoo
+
+try:
+    import torchsample
+except:
+    pass
 
 VALID_DSET_NAMES = {
     'CIFAR': ['cifar', 'cifar10', 'cifar-10'],
@@ -137,10 +141,15 @@ def load_dataset(args, train=True):
                 raise NotImplementedError('Test loading with xarray not implemented')
 
             # tips from http://benanne.github.io/2014/04/05/galaxy-zoo.html
-            transform = torch_transforms.Compose([
-                torch_transforms.Rotate(90),
-                torch_transforms.RandomFlip()
-            ])
+            try:
+                transform = torchsample.transforms.Compose([
+                    torchsample.transforms.Rotate(90),
+                    torchsample.transforms.RandomFlip()
+                ])
+                print('Using torchsample')
+            except:
+                train_transform, valid_transform = utils._data_transforms_galaxy_zoo(args)
+                transform = train_transform if train else valid_transform
 
             data = TensorDataset(
                 torch.from_numpy(X), torch.from_numpy(y),
