@@ -12,11 +12,6 @@ import boto3
 
 from galaxy_zoo import DatasetGalaxyZoo
 
-try:
-    import torchsample
-except:
-    pass
-
 VALID_DSET_NAMES = {
     'CIFAR': ['cifar', 'cifar10', 'cifar-10'],
     'MNIST': ['mnist'],
@@ -140,16 +135,16 @@ def load_dataset(args, train=True):
                 # ds = xr.open_dataset(os.path.join(args.data, args.folder_name, 'galaxy_test.nc'))
                 raise NotImplementedError('Test loading with xarray not implemented')
 
-            # tips from http://benanne.github.io/2014/04/05/galaxy-zoo.html
             try:
-                transform = torchsample.transforms.Compose([
-                    torchsample.transforms.Rotate(90),
-                    torchsample.transforms.RandomFlip()
-                ])
-                print('Using torchsample')
+                import torchsample
             except:
-                train_transform, valid_transform = utils._data_transforms_galaxy_zoo(args)
-                transform = train_transform if train else valid_transform
+                raise RuntimeError('Install torchsample: pip install git+https://github.com/ncullen93/torchsample')
+                
+            # tips from http://benanne.github.io/2014/04/05/galaxy-zoo.html
+            transform = torchsample.transforms.Compose([
+                torchsample.transforms.Rotate(90),
+                torchsample.transforms.RandomFlip()
+            ])
 
             data = torchsample.TensorDataset(
                 torch.from_numpy(X), torch.from_numpy(y),
