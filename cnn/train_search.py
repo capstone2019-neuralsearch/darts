@@ -103,16 +103,16 @@ def main():
   criterion = nn.CrossEntropyLoss() if not is_regression else nn.MSELoss()
   criterion = criterion.cuda()
 
-  # In the special case that the dataset is GalaxyZoo, overwrite Network with GalaxyZooNetwork
-  # unless the user specified gz_regression
-  if (dataset == 'GalaxyZoo') and not args.gz_regression:
-    model = Network(C=args.init_channels, num_classes=OUTPUT_DIM, primitives_name=primitives_name,
-                    layers=args.layers, criterion=criterion, num_channels=IN_CHANNELS)
-  else:
-    model = NetworkGalaxyZoo(C=args.init_channels, num_classes=OUTPUT_DIM, primitives_name=primitives_name,
+  # Special network for Galaxy Zoo regression
+  if dataset == 'GalaxyZoo' and args.gz_regression:
+      model = NetworkGalaxyZoo(C=args.init_channels, num_classes=OUTPUT_DIM, primitives_name=primitives_name,
                              layers=args.layers, criterion=criterion,
                              fc1_size=args.fc1_size, fc2_size=args.fc2_size,
                              num_channels=IN_CHANNELS)
+  else:
+      model = Network(C=args.init_channels, num_classes=OUTPUT_DIM, primitives_name=primitives_name,
+                      layers=args.layers, criterion=criterion, num_channels=IN_CHANNELS)
+                      
   model = model.cuda()
   logging.info("param size = %fMB", utils.count_parameters_in_MB(model))
 
