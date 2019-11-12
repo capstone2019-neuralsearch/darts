@@ -25,6 +25,8 @@ parser = argparse.ArgumentParser("darts")
 # NON-PERFORMANCE RELATED
 parser.add_argument('--dataset', type=str, default='cifar', help='name of the dataset to use (e.g. cifar, mnist, graphene)')
 parser.add_argument('--data', type=str, default='../data', help='location of the data corpus')
+parser.add_argument('--folder_name', type=str, default=None, help='Name of top-level folder containing the data, e.g. galaxy_zoo')
+parser.add_argument('--use_xarray', action='store_true', default=True, help='use xarray package for data loading')
 parser.add_argument('--report_freq', type=float, default=50, help='report frequency')
 parser.add_argument('--gpu', type=int, default=0, help='gpu device id')
 parser.add_argument('--model_path', type=str, default='saved_models', help='path to save the model')
@@ -50,8 +52,8 @@ parser.add_argument('--optimizer', type=str, default='Adam', help='optimizer; on
 parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
 parser.add_argument('--fc1_size', type=int, default=1024, help='number of units in fully connected layer 1')
 parser.add_argument('--fc2_size', type=int, default=1024, help='number of units in fully connected layer 2')
-parser.add_argument('--gz_regression', action='store_true', default=True,
-                    help='run GalaxyZoo as a standard regression (default True: use simple regression method)')
+parser.add_argument('--gz_dtree', action='store_true', default=False,
+                    help='run GalaxyZoo with decision tree structure (default False: use simple regression)')
 
 ## LESS IMPORTANT
 parser.add_argument('--train_portion', type=float, default=0.9, help='portion of validation data')
@@ -119,7 +121,7 @@ def main():
 
   genotypes.save_genotype_to_file(genotype, os.path.join(args.save, "genotype.arch"))
   # Set the inference network; default is NetworkCifar10; supported alternatives NetworkGalaxyZoo
-  if dataset == 'GalaxyZoo' and not args.gz_regression:
+  if dataset == 'GalaxyZoo' and args.gz_dtree:
     model = NetworkGalaxyZoo(C=args.init_channels, num_classes=OUTPUT_DIM, layers=args.layers, genotype=genotype,
                              fc1_size=args.fc1_size, fc2_size=args.fc2_size, num_channels=IN_CHANNELS)
   else:

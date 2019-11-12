@@ -53,8 +53,8 @@ parser.add_argument('--optimizer', type=str, default='Adam', help='optimizer; on
 parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
 parser.add_argument('--fc1_size', type=int, default=1024, help='number of units in fully connected layer 1')
 parser.add_argument('--fc2_size', type=int, default=1024, help='number of units in fully connected layer 2')
-parser.add_argument('--gz_regression', action='store_true', default=True,
-                    help='run GalaxyZoo as a standard regression (default True: use simple regression method)')
+parser.add_argument('--gz_dtree', action='store_true', default=False,
+                    help='run GalaxyZoo with decision tree structure (default False: use simple regression)')
 parser.add_argument('--primitives', type=str, default='Default',
                     help='set of primitive operations for arch search; defined in genotypes.py')
 
@@ -118,7 +118,7 @@ def main():
   criterion = criterion.cuda()
 
   # Special network for Galaxy Zoo regression
-  if dataset == 'GalaxyZoo' and not args.gz_regression:
+  if dataset == 'GalaxyZoo' and args.gz_dtree:
       model = NetworkGalaxyZoo(C=args.init_channels, num_classes=OUTPUT_DIM, primitives_name=primitives_name,
                              layers=args.layers, criterion=criterion,
                              fc1_size=args.fc1_size, fc2_size=args.fc2_size,
