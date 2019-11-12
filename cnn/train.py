@@ -54,6 +54,8 @@ parser.add_argument('--fc1_size', type=int, default=1024, help='number of units 
 parser.add_argument('--fc2_size', type=int, default=1024, help='number of units in fully connected layer 2')
 parser.add_argument('--gz_dtree', action='store_true', default=False,
                     help='run GalaxyZoo with decision tree structure (default False: use simple regression)')
+parser.add_argument('--primitives', type=str, default='Default',
+                    help='set of primitive operations for arch search; defined in genotypes.py')
 
 ## LESS IMPORTANT
 parser.add_argument('--train_portion', type=float, default=0.9, help='portion of validation data')
@@ -80,6 +82,9 @@ logging.getLogger().addHandler(fh)
 # Get normalized dataset name
 dataset = DSET_NAME_TBL[args.dataset.lower().strip()]
 
+# If the default set of primitives is requested, use the normalized name of the dataset
+primitives_name = dataset if args.primitives == 'Default' else args.primitives
+
 def main():
   if not torch.cuda.is_available():
     logging.info('no gpu device available')
@@ -104,7 +109,8 @@ def main():
   criterion = nn.CrossEntropyLoss() if not is_regression else nn.MSELoss()
 
   if args.random:
-    model_tmp = Network(args.init_channels, OUTPUT_DIM, args.layers, criterion, num_channels=IN_CHANNELS)
+    model_tmp = Network(C=args.init_channels, num_classes=OUTPUT_DIM, layers=args.layers, 
+                        primitives_name=primitives_name, criterion=criterion, num_channels=IN_CHANNELS)
     genotype = model_tmp.genotype()  # Random
 
     # We can now set the random seed.
