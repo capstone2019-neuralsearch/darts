@@ -151,8 +151,7 @@ def main():
   # Split training data into training and validation queues
   num_train = len(train_data)
   indices = list(range(num_train))
-  train_portion = 1.0 - args.val_portion
-  split = int(np.floor(train_portion * num_train))
+  split = int(np.floor(args.train_portion * num_train))
 
   train_queue = torch.utils.data.DataLoader(
       train_data, batch_size=args.batch_size,
