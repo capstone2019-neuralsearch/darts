@@ -40,7 +40,8 @@ class Architect(object):
 
   def _get_arch_parameters(self, model):
       """ collect architecture parameters from `model` into a Torch tensor """
-      params = torch.Tensor([v.data for v in model.arch_parameters()])
+      params = [v.data for v in model.arch_parameters()]
+      params = torch.Tensor(params)
       return params
 
   def _compute_L1_loss(self, model):
