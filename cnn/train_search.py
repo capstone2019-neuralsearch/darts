@@ -167,13 +167,7 @@ def main():
   # history of training and validation loss; 2 columns for loss and accuracy / R2
   hist_trn = np.zeros((args.epochs, 2))
   hist_val = np.zeros((args.epochs, 2))
-
-  if inference_type == 'classification':
-    metric_name = 'accuracy'
-  elif inference_type == 'regression':
-    metric_name = 'R2'
-  elif inference_type == 'multi_binary':
-    metric_name = 'AUC'
+  metric_name = 'accuracy' if inference_type == 'classification' else 'R2'
 
   for epoch in range(args.epochs):
     scheduler.step()
