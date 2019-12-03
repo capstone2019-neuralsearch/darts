@@ -40,7 +40,11 @@ def load_dataset(args, train=True):
     output:
         data - a torch Dataset
         output_dim - an integer representing necessary output dimension for a model
-        is_regression - boolean indicator for regression problems
+        # is_regression - boolean indicator for regression problems
+        inference_type - one of the following three strings:
+            'classification': model predicts one of N classes, encoded with one-hot classification; e.g.CIFAR-10
+            'regression': model predicts N real valued outputs; loss is mean squared error, e.g. galaxy-zoo
+            'multi_binary': model predicts N independent binary class labels (0 or 1)
     """
     dset_name = args.dataset.lower().strip()
 
@@ -51,7 +55,8 @@ def load_dataset(args, train=True):
         data = dset.CIFAR10(root=args.data, train=train, download=True, transform=tr)
         output_dim = 10
         in_channels = 3
-        is_regression = False
+        # is_regression = False
+        inference_type = 'classification'
 
     elif dset_name in VALID_DSET_NAMES['MNIST']:
         train_transform, valid_transform = utils._data_transforms_mnist(args)
@@ -59,7 +64,8 @@ def load_dataset(args, train=True):
         data = dset.MNIST(root=args.data, train=train, download=True, transform=tr)
         output_dim = 10
         in_channels = 1
-        is_regression = False
+        # is_regression = False
+        inference_type = 'classification'
 
     elif dset_name in VALID_DSET_NAMES['FashionMNIST']:
         train_transform, valid_transform = utils._data_transforms_mnist(args)
@@ -67,7 +73,8 @@ def load_dataset(args, train=True):
         data = dset.FashionMNIST(root=args.data, train=train, download=True, transform=tr)
         output_dim = 10
         in_channels = 1
-        is_regression = False
+        # is_regression = False
+        inference_type = 'classification'
 
     elif dset_name in VALID_DSET_NAMES['GrapheneKirigami']:
         # load xarray dataset
@@ -97,7 +104,8 @@ def load_dataset(args, train=True):
 
         output_dim = 1
         in_channels = 1
-        is_regression = True
+        # is_regression = True
+        inference_type = 'regression'
 
     elif dset_name in VALID_DSET_NAMES['GalaxyZoo']:
         if not args.use_xarray:
@@ -153,7 +161,8 @@ def load_dataset(args, train=True):
         # these parameters don't depend on train vs. validation
         output_dim = 37
         in_channels = 3
-        is_regression = True
+        # is_regression = True
+        inference_type = 'regression'
 
     elif dset_name in VALID_DSET_NAMES['ChestXRay']:
         if train:
@@ -188,11 +197,12 @@ def load_dataset(args, train=True):
         output_dim = 14
         in_channels = 1
         # TODO: use linear regression as placeholder; need to switch it to logistic regression semantics
-        is_regression = True
+        # is_regression = True
+        inference_type = 'multi_binary'
 
     else:
         exc_str = 'Unable to match provided dataset name: {}'.format(dset_name)
         exc_str += '\nValid names are case-insensitive elements of: {}'.format(VALID_DSET_NAMES)
         raise RuntimeError(exc_str)
 
-    return data, output_dim, in_channels, is_regression
+    return data, output_dim, in_channels, inference_type
