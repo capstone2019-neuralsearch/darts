@@ -98,9 +98,9 @@ def load_dataset(args, train=True):
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
         if train:
-            data = TensorDataset(from_numpy(X_train), from_numpy(y_train))
+            data = TensorDataset(torch.from_numpy(X_train), torch.from_numpy(y_train))
         else:
-            data = TensorDataset(from_numpy(X_test), from_numpy(y_test))
+            data = TensorDataset(torch.from_numpy(X_test), torch.from_numpy(y_test))
 
         output_dim = 1
         in_channels = 1
