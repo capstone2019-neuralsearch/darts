@@ -18,7 +18,6 @@ class Architect(object):
     # L1 penalty on architecture weights
     self.L1_lambda = L1_lambda
     self.L1_loss = nn.L1Loss()
-    self.L1_target = torch.zeros_like(self.model.arch_parameters())
 
   def _compute_unrolled_model(self, input, target, eta, network_optimizer):
     loss = self.model._loss(input, target)
@@ -39,16 +38,22 @@ class Architect(object):
         self._backward_step(input_valid, target_valid)
     self.optimizer.step()
 
-  def _compute_L1_loss(self):
+  def _get_arch_parameters(self, model):
+      """ collect architecture parameters from `model` into a Torch tensor """
+      params = torch.tensor([v.data for v in model.arch_parameters()])
+      return params
+
+  def _compute_L1_loss(self, model):
       """ computes L1 loss on architecture parameters
           uses a target zero tensor to encourage sparsity """
-      return self.L1_lambda * self.L1_loss(self.model.arch_parameters(), self.L1_target)
+      arch_params = self._get_arch_parameters(model)
+      return self.L1_lambda * self.L1_loss(arch_params, torch.zeros_like(arch_params))
 
   def _backward_step(self, input_valid, target_valid):
     loss = self.model._loss(input_valid, target_valid)
 
     if self.L1_lambda:
-        loss += self._compute_L1_loss()
+        loss += self._compute_L1_loss(self.model)
 
     loss.backward()
 
@@ -57,7 +62,7 @@ class Architect(object):
     unrolled_loss = unrolled_model._loss(input_valid, target_valid)
 
     if self.L1_lambda:
-        unrolled_loss +=  self._compute_L1_loss()
+        unrolled_loss +=  self._compute_L1_loss(unrolled_model)
 
     unrolled_loss.backward()
     dalpha = [v.grad for v in unrolled_model.arch_parameters()]
