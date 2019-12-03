@@ -34,31 +34,29 @@ parser.add_argument('--save', type=str, default='EXP', help='experiment name')
 parser.add_argument('--seed', type=int, default=2, help='random seed')
 
 # PERFORMANCE-RELATED
-
-## HIGHLY IMPORTANT
+### Highly important
 parser.add_argument('--init_channels', type=int, default=16, help='num of init channels')
 parser.add_argument('--layers', type=int, default=8, help='total number of layers')
 parser.add_argument('--learning_rate', type=float, default=1e-3, help='init learning rate')
 parser.add_argument('--learning_rate_min', type=float, default=1e-4, help='min learning rate')
 parser.add_argument('--weight_decay', type=float, default=1e-6, help='weight decay')
+parser.add_argument('--L1_lambda', type=float, default=None, help='multiplier on the architecture weight L1 penalty')
 parser.add_argument('--arch_learning_rate', type=float, default=1e-2, help='learning rate for arch encoding')
 parser.add_argument('--arch_weight_decay', type=float, default=1e-6, help='weight decay for arch encoding')
 parser.add_argument('--cell_steps', type=int, default=4, help='number of steps in a cell (see model_search.Network)')
 parser.add_argument('--cell_multiplier', type=int, default=4, help='multiplier for a cell (see model_search.Network)')
-
-## MEDIUM IMPORTANT
+### Somewhat important
 parser.add_argument('--epochs', type=int, default=50, help='num of training epochs')
 parser.add_argument('--batch_size', type=int, default=16, help='batch size')
 parser.add_argument('--optimizer', type=str, default='Adam', help='optimizer; one of SGD or Adam')
 parser.add_argument('--momentum', type=float, default=0.9, help='momentum')
-parser.add_argument('--fc1_size', type=int, default=1024, help='number of units in fully connected layer 1')
-parser.add_argument('--fc2_size', type=int, default=1024, help='number of units in fully connected layer 2')
 parser.add_argument('--gz_dtree', action='store_true', default=False,
                     help='run GalaxyZoo with decision tree structure (default False: use simple regression)')
+parser.add_argument('--fc1_size', type=int, default=1024, help='for gz_dtree: number of units in fully connected layer 1')
+parser.add_argument('--fc2_size', type=int, default=1024, help='for gz_dtree: number of units in fully connected layer 2')
 parser.add_argument('--primitives', type=str, default='Default',
                     help='set of primitive operations for arch search; defined in genotypes.py')
-
-## LESS IMPORTANT
+### Not very important
 parser.add_argument('--train_portion', type=float, default=0.5, help='portion of training data')
 parser.add_argument('--grad_clip', type=float, default=5, help='gradient clipping')
 parser.add_argument('--unrolled', action='store_true', default=True, help='use one-step unrolled validation loss')
@@ -151,7 +149,7 @@ def main():
   scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
         optimizer, float(args.epochs), eta_min=args.learning_rate_min)
 
-  architect = Architect(model, args)
+  architect = Architect(model, args, L1_lambda=args.L1_lambda)
 
   # history of training and validation loss; 2 columns for loss and accuracy / R2
   hist_trn = np.zeros((args.epochs, 2))
