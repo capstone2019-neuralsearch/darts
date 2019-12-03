@@ -180,15 +180,11 @@ def load_dataset(args, train=True):
             # ds = xr.open_dataset(os.path.join(args.data, args.folder_name, 'galaxy_test.nc'))
             raise NotImplementedError('Test loading with xarray not implemented')
 
-        try:
-            import torchsample
-        except:
-            raise RuntimeError('Install torchsample: pip install git+https://github.com/ncullen93/torchsample')
         # Convert numpy arrays to torch tensors
         X_torch = torch.from_numpy(X)
         # labels have data type int8 in Xarray / Numpy; need to convert to uint8 for pytorch
         y_torch = torch.from_numpy(y.astype(np.float32))
-        data = torchsample.TensorDataset(
+        data = TensorDataset(
             X_torch, y_torch
         )
 
