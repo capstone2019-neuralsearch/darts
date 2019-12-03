@@ -41,7 +41,7 @@ class Architect(object):
   def _get_arch_parameters(self, model):
       """ collect architecture parameters from `model` into a Torch tensor """
       params = [v.data for v in model.arch_parameters()]
-      params = torch.cuda.FloatTensor(torch.stack(params, 0))
+      params = Variable(torch.cuda.FloatTensor(torch.stack(params, 0)))
       return params
 
   def _compute_L1_loss(self, model):
