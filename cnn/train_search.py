@@ -17,7 +17,7 @@ from torch.autograd import Variable
 from model_search import Network, NetworkGalaxyZoo
 from architect import Architect
 from datasets import load_dataset, DSET_NAME_TBL
-from sklearn.metrics import r2_score
+from sklearn.metrics import r2_score, roc_auc_score
 
 
 parser = argparse.ArgumentParser("darts")
@@ -81,6 +81,11 @@ dataset = DSET_NAME_TBL[args.dataset.lower().strip()]
 
 # If the default set of primitives is requested, use the normalized name of the dataset
 primitives_name = dataset if args.primitives == 'Default' else args.primitives
+
+
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
 
 def main():
   if not torch.cuda.is_available():
@@ -235,10 +240,19 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr, 
 
         if step % args.report_freq == 0:
           logging.info('train %03d %e %f %f', step, objs.avg, top1.avg, top5.avg)
-    elif inference_type in ['regression', 'multi_binary']:
+    elif inference_type == 'regression':
         r2 = r2_score(target.data.cpu().numpy(), logits.data.cpu().numpy())
         objs.update(loss.data[0], n)
         top1.update(r2, n) # "top1" for regression is the R^2
+
+        if step % args.report_freq == 0:
+          logging.info('train %03d %e %f', step, objs.avg, top1.avg)
+    elif inference_type == 'multi_binary':
+        auc = roc_auc_score(target.data.cpu().numpy(),
+                            sigmoid(logits.data.cpu().numpy())
+                            )
+        objs.update(loss.data[0], n)
+        top1.update(auc, n) # "top1" for binary classification is the AUC
 
         if step % args.report_freq == 0:
           logging.info('train %03d %e %f', step, objs.avg, top1.avg)
@@ -271,11 +285,19 @@ def infer(valid_queue, model, criterion, inference_type='classification'):
 
         if step % args.report_freq == 0:
           logging.info('valid %03d %e %f %f', step, objs.avg, top1.avg, top5.avg)
-    elif inference_type in ['regression', 'multi_binary']:
-        # use the same metric for both cases for now
+    elif inference_type == 'regression':
         r2 = r2_score(target.data.cpu().numpy(), logits.data.cpu().numpy())
         objs.update(loss.data[0], n)
         top1.update(r2, n) # "top1" for regression is the R^2
+
+        if step % args.report_freq == 0:
+          logging.info('valid %03d %e %f', step, objs.avg, top1.avg)
+    elif inference_type == 'multi_binary':
+        auc = roc_auc_score(target.data.cpu().numpy(),
+                            sigmoid(logits.data.cpu().numpy())
+                            )
+        objs.update(loss.data[0], n)
+        top1.update(auc, n) # "top1" for binary classification is the AUC
 
         if step % args.report_freq == 0:
           logging.info('valid %03d %e %f', step, objs.avg, top1.avg)
