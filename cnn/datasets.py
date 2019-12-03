@@ -17,7 +17,8 @@ VALID_DSET_NAMES = {
     'MNIST': ['mnist'],
     'FashionMNIST': ['fashionmnist', 'fashion-mnist', 'mnistfashion'],
     'GrapheneKirigami': ['graphene', 'graphenekirigami', 'graphene-kirigami', 'kirigami'],
-    'GalaxyZoo': ['galaxy-zoo', 'galaxyzoo']
+    'GalaxyZoo': ['galaxy-zoo', 'galaxyzoo'],
+    'ChestXRay': ['chest-xray', 'chest-x-ray']
 }
 
 # Table to normalize data set name; key = aliased name, value = canonical dataset name
@@ -121,14 +122,12 @@ def load_dataset(args, train=True):
                 data = DatasetGalaxyZoo(train_img_dir, train_csv_file, transform=transform)
             else:
                 data = DatasetGalaxyZoo(test_img_dir, test_csv_file, transform=transform)
-
         else:
             if train:
                 if args.folder_name is not None:
                     ds = xr.open_dataset(os.path.join(args.data, args.folder_name, 'galaxy_train.nc'))
                 else:
                     ds = xr.open_dataset(os.path.join(args.data, 'galaxy_train.nc'))
-
                 X = ds['image_train'].transpose('sample', 'channel', 'x' ,'y').data  # pytorch use channel-first, unlike Keras
                 y = ds['label_train'].data
             else:
@@ -154,6 +153,41 @@ def load_dataset(args, train=True):
         # these parameters don't depend on train vs. validation
         output_dim = 37
         in_channels = 3
+        is_regression = True
+
+    elif dset_name in VALID_DSET_NAMES['ChestXRay']:
+        if train:
+            if args.folder_name is not None:
+                ds = xr.open_dataset(os.path.join(args.data, args.folder_name, 'chest_xray.nc'))
+            else:
+                ds = xr.open_dataset(os.path.join(args.data, 'chest_xray.nc'))
+                
+            # pytorch use channel-first, unlike Keras; order is (sample, channel, x, y)
+            X = ds['image'].transpose('sample', 'x' ,'y').data
+            # add channel dimension 
+            X = np.expand_dims(X, axis=1)
+            y = ds['label'].transpose('sample', 'feature').data
+        else:
+            # ds = xr.open_dataset(os.path.join(args.data, args.folder_name, 'galaxy_test.nc'))
+            raise NotImplementedError('Test loading with xarray not implemented')
+
+        try:
+            import torchsample
+        except:
+            raise RuntimeError('Install torchsample: pip install git+https://github.com/ncullen93/torchsample')
+        # Convert numpy arrays to torch tensors
+        X_torch = torch.from_numpy(X)
+        # labels have data type int8 in Xarray / Numpy; need to convert to uint8 for pytorch
+        y_torch = torch.from_numpy(y.astype(np.float32))
+        data = torchsample.TensorDataset(
+            X_torch, y_torch
+        )
+
+        # these parameters don't depend on train vs. validation
+        # 14 different diseases; each can be labeled 0 or 1 independently (not n-fold classification!)
+        output_dim = 14
+        in_channels = 1
+        # TODO: use linear regression as placeholder; need to switch it to logistic regression semantics
         is_regression = True
 
     else:

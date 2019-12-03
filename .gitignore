@@ -5,6 +5,7 @@
 *.tar.gz
 # data directories (should be recreated locally)
 /data
+/cnn/data
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

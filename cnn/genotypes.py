@@ -49,7 +49,8 @@ PRIMITIVES_TBL = {
     'MNIST': primitives_Default,
     'FashionMNIST': primitives_Default,
     'GrapheneKirigami': primitives_Default,
-    'GalaxyZoo': primitives_GalaxyZoo
+    'GalaxyZoo': primitives_GalaxyZoo,
+    'ChestXRay': primitives_Default,
 }
 
 NASNet = Genotype(
@@ -213,6 +214,9 @@ GALAXY_ZOO = Genotype(
             ('dil_conv_5x5', 0)],
             reduce_concat=range(2, 6))
 
+# Placeholder architecture for ChestXRay
+CHEST_XRAY = DARTS_V2
+
 # Table of default architecture by standardized data set name
 GENOTYPE_TBL = {
     'CIFAR': CIFAR_10,
@@ -220,4 +224,5 @@ GENOTYPE_TBL = {
     'FashionMNIST': FASHION_MNIST,
     'GrapheneKirigami': GRAPHENE,
     'GalaxyZoo': GALAXY_ZOO,
+    'ChestXRay': CHEST_XRAY
 }
