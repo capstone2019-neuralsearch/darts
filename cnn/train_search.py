@@ -112,16 +112,7 @@ def main():
       sampler=torch.utils.data.sampler.SubsetRandomSampler(indices[split:num_train]),
       pin_memory=True, num_workers=2)
 
-  if inference_type == 'classification':
-    criterion = nn.CrossEntropyLoss()
-  elif inference_type == 'regression':
-    criterion = nn.MSELoss()
-  elif inference_type == 'multi_binary':
-    criterion = nn.BCEWithLogitsLoss()
-  else:
-    raise ValueError("Bad inference_type; must be one of classification, regression, or multi_binary")
-
-  criterion = criterion.cuda()
+  criterion = utils.loss_criterion(inferency_type)
 
   # Special network for Galaxy Zoo regression
   if dataset == 'GalaxyZoo' and args.gz_dtree:
@@ -201,9 +192,9 @@ def main():
 
 
 def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr, inference_type='classification'):
-  objs = utils.AvgrageMeter()
-  top1 = utils.AvgrageMeter()
-  top5 = utils.AvgrageMeter()
+  objs = utils.AverageMeter()
+  top1 = utils.AverageMeter()
+  top5 = utils.AverageMeter()
 
   for step, (input, target) in enumerate(train_queue):
     model.train()
@@ -249,9 +240,9 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr, 
 
 
 def infer(valid_queue, model, criterion, inference_type='classification'):
-  objs = utils.AvgrageMeter()
-  top1 = utils.AvgrageMeter()
-  top5 = utils.AvgrageMeter()
+  objs = utils.AverageMeter()
+  top1 = utils.AverageMeter()
+  top5 = utils.AverageMeter()
   model.eval()
 
   for step, (input, target) in enumerate(valid_queue):

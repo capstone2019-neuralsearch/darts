@@ -104,9 +104,9 @@ def main():
   logging.info('gpu device = %d' % args.gpu)
   logging.info("args = %s", args)
 
-  train_data, OUTPUT_DIM, IN_CHANNELS, is_regression = load_dataset(args, train=True)
+  train_data, OUTPUT_DIM, IN_CHANNELS, inference_type = load_dataset(args, train=True)
 
-  criterion = nn.CrossEntropyLoss() if not is_regression else nn.MSELoss()
+  criterion = utils.loss_criterion(inference_type)
 
   if args.random:
     model_tmp = Network(C=args.init_channels, num_classes=OUTPUT_DIM, layers=args.layers, 
@@ -174,7 +174,7 @@ def main():
   # history of training and validation loss; 2 columns for loss and accuracy / R2
   hist_trn = np.zeros((args.epochs, 2))
   hist_val = np.zeros((args.epochs, 2))
-  metric_name = 'accuracy' if not is_regression else 'R2'
+  metric_name = 'accuracy' if inference_type == 'classification' else 'R2'
 
   for epoch in range(args.epochs):
     # scheduler.step()
@@ -184,14 +184,14 @@ def main():
     model.drop_path_prob = args.drop_path_prob
 
     # training results
-    train_acc, train_obj = train(train_queue, model, criterion, optimizer, is_regression=is_regression)
+    train_acc, train_obj = train(train_queue, model, criterion, optimizer, inference_type=inference_type)
     logging.info(f'training loss; {metric_name}: {train_obj:e} {train_acc:f}')
     # save history to numpy arrays
     hist_trn[epoch] = [train_acc, train_obj]
     np.save(os.path.join(args.save, 'hist_trn'), hist_trn)
 
     # validation results
-    valid_acc, valid_obj = infer(valid_queue, model, criterion, is_regression=is_regression)
+    valid_acc, valid_obj = infer(valid_queue, model, criterion, inference_type=inference_type)
     logging.info(f'validation loss; {metric_name}: {valid_obj:e} {valid_acc:f}')
     # save history to numpy arrays
     hist_val[epoch] = [valid_acc, valid_obj]
@@ -201,10 +201,10 @@ def main():
     utils.save(model, os.path.join(args.save, 'weights.pt'))
 
 
-def train(train_queue, model, criterion, optimizer, is_regression=False):
-  objs = utils.AvgrageMeter()
-  top1 = utils.AvgrageMeter()
-  top5 = utils.AvgrageMeter()
+def train(train_queue, model, criterion, optimizer, inference_type='classification'):
+  objs = utils.AverageMeter()
+  top1 = utils.AverageMeter()
+  top5 = utils.AverageMeter()
   model.train()
 
   for step, (input, target) in enumerate(train_queue):
@@ -223,7 +223,7 @@ def train(train_queue, model, criterion, optimizer, is_regression=False):
 
     n = input.size(0)
 
-    if not is_regression:
+    if inference_type == 'classification':
         prec1, prec5 = utils.accuracy(logits, target, topk=(1, 5))
         objs.update(loss.data[0], n)
         top1.update(prec1.data[0], n)
@@ -231,21 +231,22 @@ def train(train_queue, model, criterion, optimizer, is_regression=False):
 
         if step % args.report_freq == 0:
           logging.info('train %03d %e %f %f', step, objs.avg, top1.avg, top5.avg)
-    else:
+    elif inference_type in ['regression', 'multi_binary']:
         r2 = r2_score(target.data.cpu().numpy(), logits.data.cpu().numpy())
         objs.update(loss.data[0], n)
         top1.update(r2, n) # "top1" for regression is the R^2
 
         if step % args.report_freq == 0:
           logging.info('train %03d %e %f', step, objs.avg, top1.avg)
-
+    else:
+        ValueError
   return top1.avg, objs.avg
 
 
-def infer(valid_queue, model, criterion, is_regression=False):
-  objs = utils.AvgrageMeter()
-  top1 = utils.AvgrageMeter()
-  top5 = utils.AvgrageMeter()
+def infer(valid_queue, model, criterion, inference_type='classification'):
+  objs = utils.AverageMeter()
+  top1 = utils.AverageMeter()
+  top5 = utils.AverageMeter()
   model.eval()
 
   for step, (input, target) in enumerate(valid_queue):
@@ -257,7 +258,7 @@ def infer(valid_queue, model, criterion, is_regression=False):
 
     n = input.size(0)
 
-    if not is_regression:
+    if inference_type == 'classification':
         prec1, prec5 = utils.accuracy(logits, target, topk=(1, 5))
         objs.update(loss.data[0], n)
         top1.update(prec1.data[0], n)
@@ -265,13 +266,16 @@ def infer(valid_queue, model, criterion, is_regression=False):
 
         if step % args.report_freq == 0:
           logging.info('valid %03d %e %f %f', step, objs.avg, top1.avg, top5.avg)
-    else:
+    elif inference_type in ['regression', 'multi_binary']:
+        # use the same metric for both cases for now
         r2 = r2_score(target.data.cpu().numpy(), logits.data.cpu().numpy())
         objs.update(loss.data[0], n)
         top1.update(r2, n) # "top1" for regression is the R^2
 
         if step % args.report_freq == 0:
           logging.info('valid %03d %e %f', step, objs.avg, top1.avg)
+    else:
+        ValueError
 
   return top1.avg, objs.avg
 
