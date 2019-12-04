@@ -1,12 +1,31 @@
 import os
 import numpy as np
 import torch
+import torch.nn as nn
 import shutil
 import torchvision.transforms as transforms
 from torch.autograd import Variable
 
+def loss_criterion(inference_type: str):
+  """
+  Return the loss function (criterion) suitable to this inference type.
+  INPUTS:
+    inference_type: one of 'classification', 'regression', or 'multi_binary'
+  OUTPUTS:
+    criterion: a torch function to compute the loss
+  """
+  if inference_type == 'classification':
+    criterion = nn.CrossEntropyLoss()
+  elif inference_type == 'regression':
+    criterion = nn.MSELoss()
+  elif inference_type == 'multi_binary':
+    criterion = nn.BCEWithLogitsLoss()
+  else:
+    raise ValueError("Bad inference_type; must be one of classification, regression, or multi_binary")
+  # Return the cuda version of this function
+  return criterion.cuda()
 
-class AvgrageMeter(object):
+class AverageMeter(object):
 
   def __init__(self):
     self.reset()

@@ -49,7 +49,8 @@ PRIMITIVES_TBL = {
     'MNIST': primitives_Default,
     'FashionMNIST': primitives_Default,
     'GrapheneKirigami': primitives_Default,
-    'GalaxyZoo': primitives_GalaxyZoo
+    'GalaxyZoo': primitives_GalaxyZoo,
+    'ChestXRay': primitives_Default,
 }
 
 NASNet = Genotype(
@@ -213,6 +214,21 @@ GALAXY_ZOO = Genotype(
             ('dil_conv_5x5', 0)],
             reduce_concat=range(2, 6))
 
+# Best discovered architecture for ChestXRay 2019-12-04
+# 12/04 10:12:32 AM validation loss; R2: 1.637007e-01 -10.277610
+# 12/04 10:12:32 AM epoch 4 lr 9.858624e-04
+CHEST_XRAY = Genotype(
+    normal=[('max_pool_3x3', 0), ('dil_conv_5x5', 1), 
+            ('max_pool_3x3', 0), ('sep_conv_3x3', 1), 
+            ('skip_connect', 0), ('sep_conv_5x5', 2), 
+            ('skip_connect', 2), ('max_pool_3x3', 0)], 
+            normal_concat=range(2, 6), 
+    reduce=[('max_pool_3x3', 0), ('max_pool_3x3', 1), 
+            ('dil_conv_5x5', 2), ('dil_conv_5x5', 0), 
+            ('dil_conv_5x5', 3), ('sep_conv_5x5', 2), 
+            ('sep_conv_5x5', 2), ('dil_conv_5x5', 3)], 
+            reduce_concat=range(2, 6))
+
 # Table of default architecture by standardized data set name
 GENOTYPE_TBL = {
     'CIFAR': CIFAR_10,
@@ -220,4 +236,5 @@ GENOTYPE_TBL = {
     'FashionMNIST': FASHION_MNIST,
     'GrapheneKirigami': GRAPHENE,
     'GalaxyZoo': GALAXY_ZOO,
+    'ChestXRay': CHEST_XRAY
 }

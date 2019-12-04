@@ -5,6 +5,9 @@
 *.tar.gz
 # data directories (should be recreated locally)
 /data
+/cnn/data
+# VS code files
+*/.vscode/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

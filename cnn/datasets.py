@@ -17,7 +17,8 @@ VALID_DSET_NAMES = {
     'MNIST': ['mnist'],
     'FashionMNIST': ['fashionmnist', 'fashion-mnist', 'mnistfashion'],
     'GrapheneKirigami': ['graphene', 'graphenekirigami', 'graphene-kirigami', 'kirigami'],
-    'GalaxyZoo': ['galaxy-zoo', 'galaxyzoo']
+    'GalaxyZoo': ['galaxy-zoo', 'galaxyzoo'],
+    'ChestXRay': ['chest-xray', 'chest-x-ray']
 }
 
 # Table to normalize data set name; key = aliased name, value = canonical dataset name
@@ -39,7 +40,11 @@ def load_dataset(args, train=True):
     output:
         data - a torch Dataset
         output_dim - an integer representing necessary output dimension for a model
-        is_regression - boolean indicator for regression problems
+        # is_regression - boolean indicator for regression problems
+        inference_type - one of the following three strings:
+            'classification': model predicts one of N classes, encoded with one-hot classification; e.g.CIFAR-10
+            'regression': model predicts N real valued outputs; loss is mean squared error, e.g. galaxy-zoo
+            'multi_binary': model predicts N independent binary class labels (0 or 1)
     """
     dset_name = args.dataset.lower().strip()
 
@@ -50,7 +55,8 @@ def load_dataset(args, train=True):
         data = dset.CIFAR10(root=args.data, train=train, download=True, transform=tr)
         output_dim = 10
         in_channels = 3
-        is_regression = False
+        # is_regression = False
+        inference_type = 'classification'
 
     elif dset_name in VALID_DSET_NAMES['MNIST']:
         train_transform, valid_transform = utils._data_transforms_mnist(args)
@@ -58,7 +64,8 @@ def load_dataset(args, train=True):
         data = dset.MNIST(root=args.data, train=train, download=True, transform=tr)
         output_dim = 10
         in_channels = 1
-        is_regression = False
+        # is_regression = False
+        inference_type = 'classification'
 
     elif dset_name in VALID_DSET_NAMES['FashionMNIST']:
         train_transform, valid_transform = utils._data_transforms_mnist(args)
@@ -66,7 +73,8 @@ def load_dataset(args, train=True):
         data = dset.FashionMNIST(root=args.data, train=train, download=True, transform=tr)
         output_dim = 10
         in_channels = 1
-        is_regression = False
+        # is_regression = False
+        inference_type = 'classification'
 
     elif dset_name in VALID_DSET_NAMES['GrapheneKirigami']:
         # load xarray dataset
@@ -90,13 +98,14 @@ def load_dataset(args, train=True):
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
         if train:
-            data = TensorDataset(from_numpy(X_train), from_numpy(y_train))
+            data = TensorDataset(torch.from_numpy(X_train), torch.from_numpy(y_train))
         else:
-            data = TensorDataset(from_numpy(X_test), from_numpy(y_test))
+            data = TensorDataset(torch.from_numpy(X_test), torch.from_numpy(y_test))
 
         output_dim = 1
         in_channels = 1
-        is_regression = True
+        # is_regression = True
+        inference_type = 'regression'
 
     elif dset_name in VALID_DSET_NAMES['GalaxyZoo']:
         if not args.use_xarray:
@@ -121,14 +130,12 @@ def load_dataset(args, train=True):
                 data = DatasetGalaxyZoo(train_img_dir, train_csv_file, transform=transform)
             else:
                 data = DatasetGalaxyZoo(test_img_dir, test_csv_file, transform=transform)
-
         else:
             if train:
                 if args.folder_name is not None:
                     ds = xr.open_dataset(os.path.join(args.data, args.folder_name, 'galaxy_train.nc'))
                 else:
                     ds = xr.open_dataset(os.path.join(args.data, 'galaxy_train.nc'))
-
                 X = ds['image_train'].transpose('sample', 'channel', 'x' ,'y').data  # pytorch use channel-first, unlike Keras
                 y = ds['label_train'].data
             else:
@@ -154,11 +161,44 @@ def load_dataset(args, train=True):
         # these parameters don't depend on train vs. validation
         output_dim = 37
         in_channels = 3
-        is_regression = True
+        # is_regression = True
+        inference_type = 'regression'
+
+    elif dset_name in VALID_DSET_NAMES['ChestXRay']:
+        if train:
+            if args.folder_name is not None:
+                ds = xr.open_dataset(os.path.join(args.data, args.folder_name, 'chest_xray.nc'))
+            else:
+                ds = xr.open_dataset(os.path.join(args.data, 'chest_xray.nc'))
+                
+            # pytorch use channel-first, unlike Keras; order is (sample, channel, x, y)
+            X = ds['image'].transpose('sample', 'x' ,'y').data
+            # add channel dimension 
+            X = np.expand_dims(X, axis=1)
+            y = ds['label'].transpose('sample', 'feature').data
+        else:
+            # ds = xr.open_dataset(os.path.join(args.data, args.folder_name, 'galaxy_test.nc'))
+            raise NotImplementedError('Test loading with xarray not implemented')
+
+        # Convert numpy arrays to torch tensors
+        X_torch = torch.from_numpy(X)
+        # labels have data type int8 in Xarray / Numpy; need to convert to uint8 for pytorch
+        y_torch = torch.from_numpy(y.astype(np.float32))
+        data = TensorDataset(
+            X_torch, y_torch
+        )
+
+        # these parameters don't depend on train vs. validation
+        # 14 different diseases; each can be labeled 0 or 1 independently (not n-fold classification!)
+        output_dim = 14
+        in_channels = 1
+        # TODO: use linear regression as placeholder; need to switch it to logistic regression semantics
+        # is_regression = True
+        inference_type = 'multi_binary'
 
     else:
         exc_str = 'Unable to match provided dataset name: {}'.format(dset_name)
         exc_str += '\nValid names are case-insensitive elements of: {}'.format(VALID_DSET_NAMES)
         raise RuntimeError(exc_str)
 
-    return data, output_dim, in_channels, is_regression
+    return data, output_dim, in_channels, inference_type
