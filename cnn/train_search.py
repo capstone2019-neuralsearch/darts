@@ -242,15 +242,6 @@ def train(train_queue, valid_queue, model, architect, criterion, optimizer, lr, 
 
         if step % args.report_freq == 0:
           logging.info('train %03d %e %f', step, objs.avg, top1.avg)
-<<<<<<< Updated upstream
-=======
-    elif inference_type == 'multi_binary':
-        objs.update(loss.data[0], n)
-        top1.update(auc, n) # "top1" for binary classification is the AUC
-
-        if step % args.report_freq == 0:
-          logging.info('train %03d %e %f', step, objs.avg, top1.avg)
->>>>>>> Stashed changes
     else:
         ValueError
 
@@ -288,22 +279,6 @@ def infer(valid_queue, model, criterion, inference_type='classification'):
 
         if step % args.report_freq == 0:
           logging.info('valid %03d %e %f', step, objs.avg, top1.avg)
-<<<<<<< Updated upstream
-=======
-    elif inference_type == 'multi_binary':
-        print(target.data.cpu().numpy().shape)
-        print(logits.data.cpu().numpy().shape)
-        print(target.data.cpu().numpy()[:5, :5])
-        print(logits.data.cpu().numpy()[:5, :5])
-        auc = roc_auc_score(target.data.cpu().numpy(),
-                            sigmoid(logits.data.cpu().numpy())
-                            )
-        objs.update(loss.data[0], n)
-        top1.update(auc, n) # "top1" for binary classification is the AUC
-
-        if step % args.report_freq == 0:
-          logging.info('valid %03d %e %f', step, objs.avg, top1.avg)
->>>>>>> Stashed changes
     else:
         ValueError
 
