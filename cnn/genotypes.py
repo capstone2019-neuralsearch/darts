@@ -215,19 +215,21 @@ GALAXY_ZOO = Genotype(
             reduce_concat=range(2, 6))
 
 # Best discovered architecture for ChestXRay 2019-12-04
-# 12/04 10:12:32 AM validation loss; R2: 1.637007e-01 -10.277610
-# 12/04 10:12:32 AM epoch 4 lr 9.858624e-04
+# 2019-12-05 07:19:20,039 validation loss; R2: 1.570317e-01 -9.125889
+# 2019-12-05 07:19:20,170 epoch 9 lr 9.299476e-04
+# 2019-12-05 07:19:20,171 
 CHEST_XRAY = Genotype(
-    normal=[('max_pool_3x3', 0), ('dil_conv_5x5', 1), 
-            ('max_pool_3x3', 0), ('sep_conv_3x3', 1), 
-            ('skip_connect', 0), ('sep_conv_5x5', 2), 
-            ('skip_connect', 2), ('max_pool_3x3', 0)], 
-            normal_concat=range(2, 6), 
-    reduce=[('max_pool_3x3', 0), ('max_pool_3x3', 1), 
-            ('dil_conv_5x5', 2), ('dil_conv_5x5', 0), 
-            ('dil_conv_5x5', 3), ('sep_conv_5x5', 2), 
-            ('sep_conv_5x5', 2), ('dil_conv_5x5', 3)], 
-            reduce_concat=range(2, 6))
+  normal=[
+    ('dil_conv_5x5', 1), ('max_pool_3x3', 0), 
+    ('max_pool_3x3', 0), ('max_pool_3x3', 1), 
+    ('sep_conv_5x5', 0), ('sep_conv_5x5', 2), 
+    ('sep_conv_3x3', 4), ('skip_connect', 2)], 
+  normal_concat=range(2, 6), 
+  reduce=[('max_pool_3x3', 0), ('max_pool_3x3', 1), 
+          ('dil_conv_5x5', 2), ('dil_conv_5x5', 0), 
+          ('dil_conv_5x5', 3), ('dil_conv_5x5', 2), 
+          ('dil_conv_5x5', 3), ('sep_conv_3x3', 0)], 
+          reduce_concat=range(2, 6))
 
 # Table of default architecture by standardized data set name
 GENOTYPE_TBL = {
